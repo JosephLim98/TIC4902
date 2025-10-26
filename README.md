@@ -37,3 +37,5 @@ Ensure your are at root level of project to run docker compose
 ```
 docker compose up -d  
 ```
+
+Access Kafka UI at `http://localhost:8080`
