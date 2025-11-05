@@ -1,0 +1,30 @@
+# Seperate pod for executing flinksql
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flink-sql-client
+  labels:
+    app: flink
+    component: sql-client
+spec:
+  containers:
+  - name: sql-client
+    image: flink:1.19-kafka
+    imagePullPolicy: Never
+    command: ["/bin/bash"]
+    args: ["-c", "sleep infinity"]
+    volumeMounts:
+    - name: flink-config-volume
+      mountPath: /opt/flink/conf
+    securityContext:
+      runAsUser: 9999
+  volumes:
+  - name: flink-config-volume
+    configMap:
+      name: flink-config
+      items:
+      - key: flink-conf.yaml
+        path: flink-conf.yaml
+      - key: log4j-console.properties
+        path: log4j-console.properties
+
