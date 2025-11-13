@@ -2,7 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import initDatabase from "./db/init.js";
-import authRoutes from "./routes/auth.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -11,7 +11,7 @@ app.use(express.json());
 const PORT = process.env.PORT;
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api", authRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
