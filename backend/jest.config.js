@@ -15,4 +15,5 @@ export default {
   ],
   coverageDirectory: "coverage",
   verbose: true,
+  silent: true,
 };
