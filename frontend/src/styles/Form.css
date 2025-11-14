@@ -20,7 +20,7 @@ body {
     padding: 2rem 2.5rem;
     max-width: 400px;
     width: 100%;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Form stretches to container width */
