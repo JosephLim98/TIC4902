@@ -70,11 +70,10 @@ export async function loginService(email, password) {
         [email]
       );
     
-    if(!userCheck.length === 0){
-        return res.status(400).json({
-            success: false,
-            message: "Invalid Credential",
-          });
+    if(userCheck.rows.length === 0){
+        const err = new Error("Invalid Credential!");
+        err.status = 409;
+        throw err;
     }   
 
     const user = userCheck.rows[0]

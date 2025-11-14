@@ -196,8 +196,8 @@ describe("Auth Service Tests", () => {
         await loginService("nonexistent@example.com", "password123");
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
-        expect(error.message).toBe("Invalid Credential");
-        expect(error.status).toBe(400);
+        expect(error.message).toBe("Invalid Credential!");
+        expect(error.status).toBe(409);
       }
     });
 
