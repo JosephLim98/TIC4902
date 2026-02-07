@@ -1,27 +1,34 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import initDatabase from "./db/init.js";
-import authRoutes from "./routes/authRoutes.js";
+import initDatabase from "./src/db/init.js";
+import { initializeDatabase } from "./src/config/database.js";
+import routes from './src/routes/index.js';
+import errorHandler from './src/middleware/errorHandler.js';
 
 dotenv.config();
+
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
-const PORT = process.env.PORT;
 
 // Routes
-app.use("/api", authRoutes);
+app.use("/api", routes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
 
+app.use(errorHandler);
+
 // Initialize database and start server
 const startServer = async () => {
   try {
     await initDatabase();
+    await initializeDatabase();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
