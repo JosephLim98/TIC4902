@@ -38,16 +38,39 @@ const sequelize = new Sequelize({
 
   export async function initializeDatabase() {
     try {
-      // Import models
-      await import('../models/index.js');
-      
+      const { FlinkConfig } = await import('../models/index.js');
       // Sync all models
       await sequelize.sync({ alter: false });
-      
       logger.info('Database schema synchronized');
+      
+      await seedFlinkConfig(FlinkConfig);
+
       return true;
     } catch (error) {
       logger.error('Database initialization failed', { error: error.message });
       throw error;
     }
   }
+
+  async function seedFlinkConfig(FlinkConfig) {
+    const count = await FlinkConfig.count();
+    
+    if (count === 0) {
+      await FlinkConfig.create({
+        image: 'flink:1.19',
+        flinkVersion: 'v1_19',
+        serviceAccount: 'flink',
+        namespace: 'default',
+        jobManagerMemory: '1024m',
+        jobManagerCpu: 0.5,
+        jobManagerReplicas: 1,
+        taskManagerMemory: '1024m',
+        taskManagerCpu: 0.5,
+        taskManagerReplicas: 1,
+        taskManagerSlots: 1
+      });
+      logger.info('Seeded default Flink configuration');
+    }
+  }
+
+export default sequelize;

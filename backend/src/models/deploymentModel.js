@@ -11,7 +11,7 @@ const Deployment = sequelize.define('Deployment', {
         type: DataTypes.STRING(63),// Kubernetes character limit 
         allowNull: false,
         unique: true,
-        field: 'deployment_name', // DNS-1123 compliant, if not kubernetes naming will throw error
+        field: 'deployment_name',
         validate: {
           is: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/  
         }
@@ -19,7 +19,10 @@ const Deployment = sequelize.define('Deployment', {
       namespace: {
         type: DataTypes.STRING(63), // Kubernetes character limit 
         allowNull: false,
-        defaultValue: 'default'
+        defaultValue: 'default',
+        validate: {
+            is: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/  
+        }
       },
       status: {
         type: DataTypes.ENUM('creating', 'running', 'failed', 'deleting', 'deleted'),

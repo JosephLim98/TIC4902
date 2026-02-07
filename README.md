@@ -13,6 +13,18 @@ npm install
 ```
 
 ### Development
+#### Set Up
+
+```bash
+./local-script/setup-flink-operator.sh
+```
+
+This script will:
+- Start Minikube if not running
+- Install cert-manager
+- Install Flink Kubernetes Operator
+- Create Flink service account
+
 Start the development server with HMR:
 ```bash
 npm run dev
@@ -26,11 +38,63 @@ cd backend
 Install dependencies
 ```
 npm install 
- ```
+```
 Run the server
 ```
 npm run dev
- ```
+```
+
+### API - Create Flink Deployment
+
+**Simplest request
+```bash
+curl -X POST http://localhost:3000/api/flink/deployments \
+  -H "Content-Type: application/json" \
+  -d '{"deploymentName": "my-flink-job"}'
+```
+
+**Full request with all options:**
+```bash
+curl -X POST http://localhost:3000/api/flink/deployments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deploymentName": "my-flink-job",
+    "namespace": "default",
+    "environmentVariables": {"KEY": "value"},
+    "jobParallelism": 2,
+    "config": {
+      "image": "flink:1.19",
+      "flinkVersion": "v1_19",
+      "serviceAccount": "flink",
+      "jobManager": {
+        "memory": "1024m",
+        "cpu": 0.5,
+        "replicas": 1
+      },
+      "taskManager": {
+        "memory": "1024m",
+        "cpu": 0.5,
+        "replicas": 1,
+        "taskSlots": 1
+      }
+    }
+  }'
+```
+
+**Parameters:**
+| Field | Required | Description |
+|-------|----------|-------------|
+| deploymentName | Yes | Unique name (1-63 chars, DNS format) |
+| namespace | No | Kubernetes namespace (default: "default") |
+| environmentVariables | No | Key-value pairs for env vars |
+| jobParallelism | No | Job parallelism (1-1024) |
+| config.image | No | Flink image |
+| config.jobManager.memory | No | Memory (e.g., "1024m", "2g") |
+| config.jobManager.cpu | No | CPU cores (0.1-32) |
+| config.taskManager.memory | No | Memory |
+| config.taskManager.cpu | No | CPU cores |
+| config.taskManager.replicas | No | Number of TaskManagers (1-100) |
+| config.taskManager.taskSlots | No | Slots per TaskManager (1-32) |
 
 ## Database and Kafka
 Ensure your are at root level of project to run docker compose
