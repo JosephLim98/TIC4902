@@ -34,3 +34,15 @@ export const ERROR_MESSAGES = {
     DNS_ERROR: 'must be lowercase alphanumeric, may contain hyphens, cannot start/end with hyphen',
     MEMORY_ERROR: 'must be number + unit. E.g., "1600m", "2g"'
 }
+
+// Maps kubernetes deployment status back to DB DEPLOYMENT_STATUS
+export const FLINK_LIFECYCLE_TO_STATUS = {
+    CREATED:      DEPLOYMENT_STATUS.CREATING,
+    DEPLOYED:     DEPLOYMENT_STATUS.CREATING,
+    STABLE:       DEPLOYMENT_STATUS.RUNNING,
+    ROLLING_BACK: DEPLOYMENT_STATUS.RUNNING,
+    SUSPENDED:    DEPLOYMENT_STATUS.RUNNING,
+    FAILING:      DEPLOYMENT_STATUS.FAILED,
+    FAILED:       DEPLOYMENT_STATUS.FAILED,
+    DELETING:     DEPLOYMENT_STATUS.DELETING,
+};

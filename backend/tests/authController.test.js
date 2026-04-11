@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 const mockRegisterService = jest.fn();
 const mockLoginService = jest.fn();
 
-jest.unstable_mockModule("../service/authService.js", () => ({
+jest.unstable_mockModule("../src/service/authService.js", () => ({
   registerService: mockRegisterService,
   loginService: mockLoginService,
 }));
 
 // Import after mocking
 const { registerUser, loginUser } = await import(
-  "../controller/authController.js"
+  "../src/controller/authController.js"
 );
 
 describe("Auth Controller Tests", () => {

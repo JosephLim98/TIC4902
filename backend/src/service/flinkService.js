@@ -2,13 +2,13 @@ import sequelize from '../config/database.js';
 import { FlinkConfig } from '../models/flinkConfigModel.js';
 import { Deployment } from '../models/index.js';
 import logger from '../utils/logger.js';
-import { DEPLOYMENT_STATUS } from '../utils/constants.js';
+import { DEPLOYMENT_STATUS, FLINK_LIFECYCLE_TO_STATUS } from '../utils/constants.js';
 import * as k8sService from './kubernetesService.js';
-import { ConflictError, KubernetesError } from '../utils/errors.js';
+import { ConflictError, KubernetesError, NotFoundError } from '../utils/errors.js';
 
 
 async function getFlinkConfig() {
-    const config = await FlinkConfig.findOne({oreder: [['id', 'ASC']]})
+    const config = await FlinkConfig.findOne({order: [['id', 'ASC']]})
     return config;
 }
 
@@ -128,6 +128,37 @@ export async function createDeployment(deploymentData){
         }
         throw error;
       }
+}
 
+async function syncDeployment(deployment) { 
+    const kubernetesStatus = await k8sService.getFlinkDeploymentStatus(
+      deployment.deploymentName,
+      deployment.namespace
+    );
 
+    if (kubernetesStatus?.lifecycleState) {
+      const mappedStatus = FLINK_LIFECYCLE_TO_STATUS[kubernetesStatus.lifecycleState];
+      if (mappedStatus && mappedStatus !== deployment.status) {
+          deployment.status = mappedStatus;
+          await deployment.save();
+          logger.info('Synced deployment status from K8s', { deploymentName, mappedStatus });
+      }
+    }
+    const result = deployment.toJSON();
+    result.kubernetesStatus = kubernetesStatus;
+    return result;
+}
+
+export async function getDeployment(deploymentName) {
+    const deployment = await Deployment.findOne({ where: { deploymentName } });
+    if (!deployment) throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+
+    const kubernetesStatus = await k8sService.getFlinkDeploymentStatus(deploymentName, deployment.namespace);
+
+    return await syncDeployment(deployment);
+}
+
+export async function listDeployments() {
+    const deployments = await Deployment.findAll({ order: [['created_at', 'DESC']] });
+    return Promise.all(deployments.map(d => syncDeployment(d)));
 }

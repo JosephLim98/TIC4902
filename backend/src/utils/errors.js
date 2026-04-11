@@ -24,3 +24,12 @@ export class ConflictError extends Error {
         this.resource = resource;
     }
 }
+
+export class NotFoundError extends Error {
+    constructor(message, resource = null) {
+        super(message);
+        this.name = 'NotFoundError';
+        this.statusCode = 404;
+        this.resource = resource;
+    }
+}
