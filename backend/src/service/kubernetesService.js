@@ -5,6 +5,27 @@ import { k8sCustomApi } from "../config/kubernetes.js";
 import logger from "../utils/logger.js";
 
 
+export async function getFlinkDeploymentStatus(deploymentName, namespace) {
+    try {
+        const response = await k8sCustomApi.getNamespacedCustomObject({
+            group: FLINK_CRD.GROUP,
+            version: FLINK_CRD.VERSION,
+            namespace,
+            plural: FLINK_CRD.PLURAL,
+            name: deploymentName
+        });
+        return {
+            lifecycleState: response.status?.lifecycleState || null,
+            jobManagerDeploymentStatus: response.status?.jobManagerDeploymentStatus || null,
+            jobStatus: response.status?.jobStatus || null,
+            error: response.status?.error || null
+        };
+    } catch (error) {
+        logger.warn('Could not fetch K8s status', { deploymentName, namespace, error: error.message });
+        return null;
+    }
+}
+
 export async function createFlinkCluster(deploymentName, namespace, config, jarSpec = null, environmentVariables = null){
     try {
         const mode = jarSpec ? FLINK_MODE.APPLICATION : FLINK_MODE.SESSION

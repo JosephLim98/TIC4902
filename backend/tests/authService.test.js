@@ -15,7 +15,7 @@ const mockJwt = {
 };
 
 // Mock modules before importing
-jest.unstable_mockModule("../config/db.js", () => ({
+jest.unstable_mockModule("../src/config/db.js", () => ({
   default: mockPool,
 }));
 
@@ -29,7 +29,7 @@ jest.unstable_mockModule("jsonwebtoken", () => ({
 
 // Import after mocking
 const { generateToken, registerService, loginService } = await import(
-  "../service/authService.js"
+  "../src/service/authService.js"
 );
 
 describe("Auth Service Tests", () => {

@@ -5,6 +5,8 @@ import validateRequest from '../middleware/validateRequest.js';
 import {createDeploymentSchema} from '../validators/flinkValidator.js'
 
 
+router.get('/deployments', flinkController.listDeployments);
+router.get('/deployments/:deploymentName', flinkController.getDeployment);
 router.post(
     '/deployments',
     validateRequest(createDeploymentSchema),

@@ -2,9 +2,6 @@ export default {
   displayName: "backend",
   testEnvironment: "node",
   transform: {},
-  moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
-  },
   testMatch: ["**/tests/**/*.test.js"],
   collectCoverage: true,
   collectCoverageFrom: [
