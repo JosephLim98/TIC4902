@@ -30,6 +30,28 @@ Start the development server with HMR:
 npm run dev
 ```
 
+### Frontend Tech Stack
+
+| Library | Purpose |
+|---------|---------|
+| **React 19** | UI framework for components, state, effects |
+| **Vite 7** | Dev server with hot reload |
+| **TypeScript** | Used for type safety |
+| **Tailwind CSS v4** | Utility classes for layout and styling directly in JSX |
+| **shadcn/ui** | Pre-built accessible components (Table, Card, Badge, Button, Input, Separator) generated into `src/components/ui/` |
+| **@base-ui/react** | Low-level headless primitives that shadcn/ui is built on |
+| **class-variance-authority** | Defines component variants (e.g. button sizes/styles) inside shadcn components |
+| **clsx + tailwind-merge** | Combined via `cn()` in `src/lib/utils.ts` to safely merges Tailwind classes without conflicts for shadcn components |
+| **react-router-dom v7** | Client-side routing — `<BrowserRouter>`, `<Routes>`, `useNavigate`, `useParams` |
+| **axios** | HTTP client — single instance in `src/api/client.ts`, API functions in `src/api/flink.ts` |
+
+### Add a new shadcn component
+```bash
+cd frontend
+npx shadcn@latest add 
+```
+There will be a drop down of the list of component to select from. Once added component appears in `src/components/ui/`
+
 ## Backend
 Head to backend folder
 ```
