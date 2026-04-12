@@ -26,6 +26,28 @@ export async function getFlinkDeploymentStatus(deploymentName, namespace) {
     }
 }
 
+export async function deleteFlinkDeployment(deploymentName, namespace) {
+    try {
+        logger.info('Deleting FlinkDeployment CRD', { deploymentName, namespace });
+        await k8sCustomApi.deleteNamespacedCustomObject({
+            group: FLINK_CRD.GROUP,
+            version: FLINK_CRD.VERSION,
+            namespace,
+            plural: FLINK_CRD.PLURAL,
+            name: deploymentName
+        });
+        logger.info('Successfully deleted FlinkDeployment CRD', { deploymentName, namespace });
+    } catch (error) {
+        if (error.message?.includes('HTTP-Code: 404')) {
+            logger.warn('FlinkDeployment CRD not found, treating as already deleted', { deploymentName, namespace });
+            return;
+        }
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to delete FlinkDeployment', { deploymentName, namespace, error: errorMsg });
+        throw new KubernetesError(`Failed to delete FlinkDeployment: ${errorMsg}`, error);
+    }
+}
+
 export async function createFlinkCluster(deploymentName, namespace, config, jarSpec = null, environmentVariables = null){
     try {
         const mode = jarSpec ? FLINK_MODE.APPLICATION : FLINK_MODE.SESSION

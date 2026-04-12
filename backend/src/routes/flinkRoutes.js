@@ -7,6 +7,7 @@ import {createDeploymentSchema} from '../validators/flinkValidator.js'
 
 router.get('/deployments', flinkController.listDeployments);
 router.get('/deployments/:deploymentName', flinkController.getDeployment);
+router.delete('/deployments/:deploymentName', flinkController.deleteDeployment);
 router.post(
     '/deployments',
     validateRequest(createDeploymentSchema),

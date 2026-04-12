@@ -129,7 +129,13 @@ export async function createDeployment(deploymentData){
       }
 }
 
-async function syncDeployment(deployment) { 
+async function syncDeployment(deployment) {
+    if (deployment.status === DEPLOYMENT_STATUS.DELETED) {
+      const result = deployment.toJSON();
+      result.kubernetesStatus = null;
+      return result;
+    }
+
     const kubernetesStatus = await k8sService.getFlinkDeploymentStatus(
       deployment.deploymentName,
       deployment.namespace
@@ -140,7 +146,7 @@ async function syncDeployment(deployment) {
       if (mappedStatus && mappedStatus !== deployment.status) {
           deployment.status = mappedStatus;
           await deployment.save();
-          logger.info('Synced deployment status from K8s', { deploymentName, mappedStatus });
+          logger.info('Synced deployment status from K8s', { deploymentName: deployment.deploymentName, mappedStatus });
       }
     }
     const result = deployment.toJSON();
@@ -148,11 +154,36 @@ async function syncDeployment(deployment) {
     return result;
 }
 
+export async function deleteDeployment(deploymentName) {
+    const deployment = await Deployment.findOne({ where: { deploymentName } });
+    if (!deployment) {
+        throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+    }
+    if (deployment.status === DEPLOYMENT_STATUS.DELETED) {
+        throw new ConflictError(`Deployment '${deploymentName}' is already deleted`, deploymentName);
+    }
+
+    try {
+        await k8sService.deleteFlinkDeployment(deploymentName, deployment.namespace);
+    } catch (k8sError) {
+        deployment.status = DEPLOYMENT_STATUS.FAILED;
+        deployment.errorMessage = k8sError.message;
+        await deployment.save();
+        logger.error('K8s delete failed, marked deployment as failed', { deploymentName, error: k8sError.message });
+        throw k8sError;
+    }
+
+    deployment.status = DEPLOYMENT_STATUS.DELETED;
+    deployment.errorMessage = null;
+    await deployment.save();
+
+    logger.info('Deployment deletion successful', { deploymentName, id: deployment.id });
+    return deployment.toJSON();
+}
+
 export async function getDeployment(deploymentName) {
     const deployment = await Deployment.findOne({ where: { deploymentName } });
     if (!deployment) throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
-
-    const kubernetesStatus = await k8sService.getFlinkDeploymentStatus(deploymentName, deployment.namespace);
 
     return await syncDeployment(deployment);
 }

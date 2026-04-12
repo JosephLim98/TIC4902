@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getDeployment } from '@/api/flink'
+import { getDeployment, deleteDeployment } from '@/api/flink'
 import type { Deployment } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,28 @@ export default function DeploymentDetailPage() {
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!name || !deployment) return
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${deployment.deploymentName}"? This will remove the Flink deployment from Kubernetes and cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteDeployment(name)
+      navigate('/')
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        || (err instanceof Error ? err.message : 'Failed to delete deployment.')
+      setError(message)
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     if (!name) return
@@ -93,11 +115,21 @@ export default function DeploymentDetailPage() {
       {deployment && (
         <>
           {/* Page header */}
-          <div className="flex items-center gap-3">
-            <h1 className="font-mono text-xl font-semibold tracking-tight text-zinc-900">
-              {deployment.deploymentName}
-            </h1>
-            <StatusBadge status={deployment.status} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="font-mono text-xl font-semibold tracking-tight text-zinc-900">
+                {deployment.deploymentName}
+              </h1>
+              <StatusBadge status={deployment.status} />
+            </div>
+            <Button
+              variant="destructive"
+              className="px-6 py-3"
+              disabled={deployment.status === 'deleting' || deployment.status === 'deleted' || deleting}
+              onClick={handleDelete}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
           </div>
 
           {deployment.errorMessage && (
