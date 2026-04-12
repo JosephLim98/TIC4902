@@ -4,7 +4,7 @@ import { Deployment } from '../models/index.js';
 import logger from '../utils/logger.js';
 import { DEPLOYMENT_STATUS, FLINK_LIFECYCLE_TO_STATUS } from '../utils/constants.js';
 import * as k8sService from './kubernetesService.js';
-import { ConflictError, KubernetesError, NotFoundError } from '../utils/errors.js';
+import { ConflictError, KubernetesError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 
 async function getFlinkConfig() {
@@ -111,7 +111,6 @@ export async function createDeployment(deploymentData){
           }
     
           deployment.resources = [crdMetadata];
-          deployment.status = DEPLOYMENT_STATUS.RUNNING;
           await deployment.save({transaction});
           await transaction.commit();
     
