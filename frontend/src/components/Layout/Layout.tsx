@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ReactElement } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from "../../hooks/useAuth";
 import './Layout.css';
 
 interface NavigationItem {
@@ -12,6 +13,8 @@ interface NavigationItem {
 const Layout: React.FC = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
     const location = useLocation();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     const navigationItems: NavigationItem[] = [
         {
@@ -19,13 +22,7 @@ const Layout: React.FC = () => {
             // TODO: Update API endpoint when supported
             path: '/dashboard',
             icon: (
-                <span className="material-symbols-outlined">grid_view</span>
-                // <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                //     <rect x="3" y="3" width="7" height="7"></rect>
-                //     <rect x="14" y="3" width="7" height="7"></rect>
-                //     <rect x="14" y="14" width="7" height="7"></rect>
-                //     <rect x="3" y="14" width="7" height="7"></rect>
-                // </svg>
+                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>grid_view</span>
             )
         },
         {
@@ -33,10 +30,7 @@ const Layout: React.FC = () => {
             // TODO: Update API endpoint when supported
             path: '/pipelines/create',
             icon: (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
+                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
             )
         }
     ];
@@ -47,6 +41,11 @@ const Layout: React.FC = () => {
         }
         return location.pathname.startsWith(path);
     };
+
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    }
 
     return (
         <div className="layout">
@@ -76,15 +75,13 @@ const Layout: React.FC = () => {
                         {!isSidebarCollapsed && <span className="logo-text">Flink Platform</span>}
                     </div>
                     <button
-                        className="collapse-btn"
+                        className="collapse-btn" // Removed the conditional 'hidden-icon' class
                         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
+                        <span className="material-symbols-outlined">
+                            {isSidebarCollapsed ? 'menu_open' : 'menu'}
+                        </span>
                     </button>
                 </div>
 
@@ -104,15 +101,12 @@ const Layout: React.FC = () => {
                 <div className="sidebar-footer">
                     <div className="user-info">
                         <div className="user-avatar">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
+                            {user?.username.charAt(0).toUpperCase()}
                         </div>
                         {!isSidebarCollapsed && (
                             <div className="user-details">
-                                <div className="user-name">Admin</div>
-                                <div className="user-role">System Manager</div>
+                                <div className="user-name" style={{ paddingBottom: '5px' }}>{user?.username}</div>
+                                <div className="user-role">{user?.email}</div>
                             </div>
                         )}
                     </div>
@@ -138,17 +132,9 @@ const Layout: React.FC = () => {
                     </div>
 
                     <div className="top-bar-actions">
-                        <button className="icon-btn" aria-label="Notifications">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg>
-                        </button>
+                        <button className="btn-logout" onClick={handleLogout}>Logout</button>
                         <button className="icon-btn" aria-label="Settings">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path d="M12 1v6m0 6v6m6.364-13.364l-4.243 4.243m-4.242 4.242l-4.243 4.243M23 12h-6m-6 0H1m18.364 6.364l-4.243-4.243m-4.242-4.242l-4.243-4.243"></path>
-                            </svg>
+                            <span className="material-symbols-outlined">sunny</span>
                         </button>
                     </div>
                 </header>

@@ -20,51 +20,33 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
                 return {
                     label: 'Running',
                     className: 'status-running',
-                    icon: (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                        </svg>
-                    )
+                    icon: <span className="material-symbols-outlined icon-fill">circle</span>
                 };
             case 'stopped':
                 return {
                     label: 'Stopped',
                     className: 'status-stopped',
-                    icon: (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                        </svg>
-                    )
+                    // Stopped is usually an outline to show "inactivity"
+                    icon: <span className="material-symbols-outlined">circle</span>
                 };
             case 'failed':
                 return {
                     label: 'Failed',
                     className: 'status-failed',
-                    icon: (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                        </svg>
-                    )
+                    icon: <span className="material-symbols-outlined">error</span>
                 };
             case 'starting':
                 return {
                     label: 'Starting',
                     className: 'status-starting',
-                    icon: (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                        </svg>
-                    )
+                    // Sync/loading icon for starting state
+                    icon: <span className="material-symbols-outlined">sync</span>
                 };
             default:
                 return {
                     label: 'Unknown',
                     className: 'status-unknown',
-                    icon: (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                        </svg>
-                    )
+                    icon: <span className="material-symbols-outlined">help</span>
                 };
         }
     };
@@ -76,7 +58,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
             <span className="status-icon">{config.icon}</span>
             <span className="status-label">{config.label}</span>
         </span>
-    )
-}
+    );
+};
 
 export default StatusBadge;

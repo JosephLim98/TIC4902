@@ -4,7 +4,6 @@ import { AuthProvider } from './context/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import HomePage from './pages/HomePage';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 
@@ -20,16 +19,6 @@ function App() {
           {/* Protected Home Page (Landing page with stats) */}
           <Route
             path="/"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Protected Dashboard Page */}
-          <Route
-            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Layout />

@@ -1,5 +1,7 @@
 .layout {
     display: flex;
+    height: 100vh;
+    overflow: hidden;
     min-height: 100vh;
     background: var(--color-bg-primary);
 }
@@ -17,16 +19,71 @@
 }
 
 .sidebar.collapsed {
-    width: 80px;
+    width: 110px;
+}
+
+.sidebar.collapsed .logo {
+    /* justify-content: center;
+    gap: 0; */
+
+    gap: 0;
 }
 
 .sidebar-header {
-    padding: var(--spacing-lg);
+    /* padding: var(--spacing-lg);
     border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
-    justify-content: space-between;
     min-height: 70px;
+    position: relative; */
+
+    padding: var(--spacing-lg); /* Keeps logo anchored at 24px (standard lg spacing) */
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    min-height: 70px;
+    position: relative; /* Essential for the absolute button */
+    overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar-header {
+    /* flex-direction: row;
+    justify-content: center;
+    padding: var(--spacing-md) 5px;
+    gap: 4px; */
+
+    padding: var(--spacing-lg) 0; /* Keep left padding for logo, but clear the right */
+    padding-left: var(--spacing-lg);
+    justify-content: flex-start;
+}
+
+/* When collapsed, we need to make sure the active-indicator doesn't float weirdly */
+.sidebar.collapsed .nav-item::before {
+    /* If you want to hide the vertical line in collapsed mode: */
+    display: none; 
+    
+    /* OR, if you want it to stay, ensure it's pinned to the very edge: */
+    /* width: 4px; */
+    /* transform: translateX(0); */
+}
+
+.sidebar.collapsed .collapse-btn {
+    /* padding: 4px; */
+
+    right: 15px; /* Move it to the absolute edge of the 80px bar */
+    left: auto;
+    width: 28px;  /* Make the button slightly smaller */
+    height: 28px;
+    padding: 0;
+}
+
+.sidebar.collapsed .collapse-btn .material-symbols-outlined {
+    font-size: 20px; /* Keep the icon legible but smaller */
+}
+
+/* Make sure the text is GONE, not just invisible, so it doesn't push the icon */
+.sidebar.collapsed .logo-text {
+    display: none;
 }
 
 .logo {
@@ -36,6 +93,10 @@
     font-weight: 600;
     font-size: var(--font-size-lg);
     color: var(--color-text-primary);
+
+    /* display: flex;
+    align-items: center;
+    gap: var(--spacing-md); */
 }
 
 .logo svg {
@@ -54,7 +115,7 @@
 }
 
 .collapse-btn {
-    background: transparent;
+    /* background: transparent;
     border: none;
     color: var(--color-text-secondary);
     cursor: pointer;
@@ -63,7 +124,23 @@
     transition: all var(--transition-fast);
     display: flex;
     align-items: center;
+    justify-content: center; */
+
+    
+    position: absolute;
+    right: var(--spacing-lg); /* Far right when expanded */
+    
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
     justify-content: center;
+    z-index: 2;
 }
 
 .collapse-btn:hover {
@@ -234,6 +311,22 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+}
+
+.btn-logout {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #e53e3e;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: #fff5f5;
+    border-color: #e53e3e;
 }
 
 .icon-btn {

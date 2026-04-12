@@ -24,7 +24,7 @@ const HomePage = () => {
 
                     <div className="action-buttons">
                         <button
-                            onClick={() => navigate("/login")}
+                            onClick={() => navigate("/dashboard")}
                             className="btn-primary"
                         >
                             Sign In

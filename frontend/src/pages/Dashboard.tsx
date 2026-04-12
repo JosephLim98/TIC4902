@@ -129,10 +129,7 @@ const Dashboard: React.FC = () => {
 
                 {/* TODO: Replace with actual pipeline endpoint */}
                 <Link to="/pipelines/create" className="btn-primary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
                     Create Pipeline
                 </Link>
             </div>
@@ -141,9 +138,7 @@ const Dashboard: React.FC = () => {
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #00d9ff 0%, #0099ff 100%)' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                        </svg>
+                        <span className="material-symbols-outlined" style={{ fontSize: "30px" }}>vital_signs</span>
                     </div>
 
                     <div className="stat-content">
@@ -154,9 +149,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="stat-card">
                     <div className="stat-icon" style={{ background: '#00e676' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                        </svg>
+                        <span className="material-symbols-outlined" style={{ fontSize: "30px" }}>pace</span>
                     </div>
 
                     <div className="stat-content">
@@ -167,11 +160,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="stat-card">
                     <div className="stat-icon" style={{ background: '#ffa726' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
+                        <span className="material-symbols-outlined" style={{ fontSize: "30px" }}>stop_circle</span>
                     </div>
 
                     <div className="stat-content">
@@ -182,11 +171,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="stat-card">
                     <div className="stat-icon" style={{ background: '#ff5252' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="15" y1="9" x2="9" y2="15"></line>
-                            <line x1="9" y1="9" x2="15" y2="15"></line>
-                        </svg>
+                        <span className="material-symbols-outlined" style={{ fontSize: "30px" }}>cancel</span>
                     </div>
 
                     <div className="stat-content">
@@ -226,10 +211,6 @@ const Dashboard: React.FC = () => {
 
                 <div className="search-box">
                     <span className="material-symbols-outlined">search</span>
-                    {/* <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg> */}
                     <input
                         type="text"
                         placeholder="Search pipelines..."
