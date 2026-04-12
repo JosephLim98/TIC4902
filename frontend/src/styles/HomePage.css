@@ -1,0 +1,273 @@
+.home-container {
+    height: 100dvh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* padding: 2rem; */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.welcome-card,
+.dashboard-preview {
+    background: white;
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 900px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-card h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #1a202c;
+    text-align: center;
+}
+
+.subtitle {
+    font-size: 1.125rem;
+    color: #718096;
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 3rem;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-secondary:hover {
+    background: #f7fafc;
+}
+
+.btn-large {
+    padding: 1rem 2.5rem;
+    font-size: 1.125rem;
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.feature {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.feature-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.feature h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #1a202c;
+}
+
+.feature p {
+    color: #718096;
+    font-size: 0.95rem;
+}
+
+/* Dashboard Preview */
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.user-info h2 {
+    margin: 0;
+    color: #1a202c;
+    font-size: 1.5rem;
+}
+
+.user-email {
+    color: #718096;
+    margin: 0.25rem 0 0 0;
+    font-size: 0.95rem;
+}
+
+.btn-logout {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #e53e3e;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: #fff5f5;
+    border-color: #e53e3e;
+}
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* Ensure the image doesn't explode out of the card */
+.stat-icon-img {
+    width: 24px;   /* Or whatever size fits your design */
+    height: 24px;
+    object-fit: contain;
+}
+
+/* Optional: if you want a circular background like before */
+.stat-icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    margin: 0.5rem 0;
+    color: #1a202c;
+}
+
+.stat-card p {
+    color: #718096;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.cta-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2.5rem;
+    border-radius: 12px;
+    text-align: center;
+    color: white;
+}
+
+.cta-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.cta-section p {
+    margin-bottom: 1.5rem;
+    opacity: 0.9;
+}
+
+.cta-section .btn-primary {
+    background: white;
+    color: #667eea;
+}
+
+.cta-section .btn-primary:hover {
+    background: #f7fafc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .welcome-card,
+    .dashboard-preview {
+        padding: 2rem;
+    }
+
+    .welcome-card h1 {
+        font-size: 2rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .user-header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+
+    .user-info {
+        flex-direction: column;
+    }
+
+    .quick-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
