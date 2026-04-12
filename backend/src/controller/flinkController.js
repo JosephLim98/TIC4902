@@ -46,6 +46,17 @@ export async function createDeployment(req, res, next) {
     }
 }
 
+export async function deleteDeployment(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info('Received deployment deletion request', { deploymentName });
+        const deployment = await flinkService.deleteDeployment(deploymentName);
+        res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function getDeployment(req, res, next) {
     try {
         const { deploymentName } = req.params;

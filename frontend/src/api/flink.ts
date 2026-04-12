@@ -32,3 +32,8 @@ export async function createDeployment(payload: CreateDeploymentPayload): Promis
   const { data } = await client.post<Deployment>('/api/flink/deployments', payload);
   return data;
 }
+
+export async function deleteDeployment(name: string): Promise<Deployment> {
+  const { data } = await client.delete<Deployment>(`/api/flink/deployments/${name}`);
+  return data;
+}

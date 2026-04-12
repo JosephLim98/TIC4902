@@ -7,19 +7,19 @@ import { Button } from '@/components/ui/button'
 
 export default function DashboardPage() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
-  const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15
 
   async function fetchDeployments(signal?: AbortSignal) {
     setLoading(true)
     setError(null)
     try {
-      const { deployments, total } = await listDeployments(signal)
+      const { deployments } = await listDeployments(signal)
       setDeployments(deployments)
-      setTotal(total)
     } catch (err) {
       if ((err as { name?: string })?.name !== 'CanceledError')
         setError('Failed to load pipelines. Try again later...')
@@ -43,6 +43,20 @@ export default function DashboardPage() {
     return deployments.filter((d) => d.deploymentName.toLowerCase().includes(term))
   }, [deployments, search])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIdx = (safePage - 1) * itemsPerPage
+  const endIdx = Math.min(safePage * itemsPerPage, filtered.length)
+
+  const paginatedDeployments = useMemo(() => {
+    return filtered.slice(startIdx, endIdx)
+  }, [filtered, startIdx, endIdx])
+
+  function handleSearch(value: string) {
+    setSearch(value)
+    setCurrentPage(1)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -51,7 +65,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900">Pipelines</h1>
             {!loading && (
-              <span className="count-badge">{total}</span>
+              <span className="count-badge">{filtered.length}</span>
             )}
           </div>
           <p className="mt-0.5 text-sm text-zinc-400">Apache Flink streaming deployments</p>
@@ -75,7 +89,7 @@ export default function DashboardPage() {
             className="pl-8 text-sm h-8 bg-white"
             placeholder="Search pipelines…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
       </div>
@@ -90,7 +104,36 @@ export default function DashboardPage() {
 
       {error && <div className="error-banner">{error}</div>}
 
-      {!loading && !error && <DeploymentTable deployments={filtered} />}
+      {!loading && !error && <DeploymentTable deployments={paginatedDeployments} />}
+
+      {!loading && !error && filtered.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-zinc-500">
+            Showing {startIdx + 1} to {endIdx} of {filtered.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage === 1}
+              onClick={() => setCurrentPage(safePage - 1)}
+            >
+              ← Previous
+            </Button>
+            <span className="px-3 text-sm text-zinc-600">
+              Page {safePage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage === totalPages}
+              onClick={() => setCurrentPage(safePage + 1)}
+            >
+              Next →
+            </Button>
+          </div>
+        </div>
+      )}
 
       <CreatePipelineModal
         isOpen={modalOpen}
