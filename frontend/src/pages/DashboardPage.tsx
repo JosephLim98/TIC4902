@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listDeployments } from '@/api/flink'
-import type { Deployment } from '@/types'
 import DeploymentTable from '@/components/DeploymentTable'
+import CreatePipelineModal from '@/components/CreatePipelineModal'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -11,20 +11,32 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  async function fetchDeployments(signal?: AbortSignal) {
+    setLoading(true)
+    setError(null)
+    try {
+      const { deployments, total } = await listDeployments(signal)
+      setDeployments(deployments)
+      setTotal(total)
+    } catch (err) {
+      if ((err as { name?: string })?.name !== 'CanceledError')
+        setError('Failed to load pipelines. Try again later...')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
-    listDeployments(controller.signal)
-      .then(({ deployments, total }) => {
-        setDeployments(deployments)
-        setTotal(total)
-      })
-      .catch((err) => {
-        if (err?.name !== 'CanceledError') setError('Failed to load pipelines. Try again later...')
-      })
-      .finally(() => setLoading(false))
+    fetchDeployments(controller.signal)
     return () => controller.abort()
   }, [])
+
+  function handleCreated() {
+    fetchDeployments()
+  }
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -44,7 +56,7 @@ export default function DashboardPage() {
           </div>
           <p className="mt-0.5 text-sm text-zinc-400">Apache Flink streaming deployments</p>
         </div>
-        <Button disabled variant="default" size="sm" className="opacity-50 cursor-not-allowed">
+        <Button variant="default" size="sm" onClick={() => setModalOpen(true)}>
           + Create Pipeline
         </Button>
       </div>
@@ -79,6 +91,12 @@ export default function DashboardPage() {
       {error && <div className="error-banner">{error}</div>}
 
       {!loading && !error && <DeploymentTable deployments={filtered} />}
+
+      <CreatePipelineModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={handleCreated}
+      />
     </div>
   )
 }
