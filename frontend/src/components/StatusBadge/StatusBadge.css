@@ -1,0 +1,64 @@
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-label {
+    line-height: 1;
+}
+
+/* Running Status */
+.status-running {
+    background: rgba(0, 230, 118, 0.15);
+    color: var(--color-success);
+    border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.status-running .status-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Stopped Status */
+.status-stopped {
+    background: rgba(255, 167, 38, 0.15);
+    color: var(--color-warning);
+    border: 1px solid rgba(255, 167, 38, 0.3);
+}
+
+/* Failed Status */
+.status-failed {
+    background: rgba(255, 82, 82, 0.15);
+    color: var(--color-error);
+    border: 1px solid rgba(255, 82, 82, 0.3);
+}
+
+/* Starting Status */
+.status-starting {
+    background: rgba(66, 165, 245, 0.15);
+    color: var(--color-info);
+    border: 1px solid rgba(66, 165, 245, 0.3);
+}
+
+.status-starting .status-icon {
+    animation: spin 1s linear infinite;
+}
+
+/* Unknown Status */
+.status-unknown {
+    background: rgba(107, 117, 133, 0.15);
+    color: var(--color-text-muted);
+    border: 1px solid rgba(107, 117, 133, 0.3);
+}
