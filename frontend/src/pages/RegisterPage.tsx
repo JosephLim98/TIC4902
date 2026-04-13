@@ -3,8 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/LoadingSpinner";
 import "../styles/Form.css";
-import showIcon from "../assets/show.png";
-import hideIcon from "../assets/hide.png";
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -145,17 +143,14 @@ const RegisterPage = () => {
                                 disabled={isLoading}
                                 minLength={6}
                             />
-                            <button
-                                type="button"
-                                className="password-toggle"
+                            
+                            <button type="button" className="password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
                                 tabIndex={-1}
                             >
-                                <img 
-                                    src={showPassword ? hideIcon : showIcon} 
-                                    alt={showPassword ? "Hide password" : "Show password"} 
-                                    style={{ width: '20px', height: '20px' }} // Optional: basic sizing
-                                />
+                                <span className="material-symbols-outlined">
+                                    {showPassword ? "visibility_off" : "visibility"}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -177,17 +172,14 @@ const RegisterPage = () => {
                                 autoComplete="new-password"
                                 disabled={isLoading}
                             />
-                            <button
-                                type="button"
-                                className="password-toggle"
+
+                            <button type="button" className="password-toggle"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 tabIndex={-1}
                             >
-                                <img 
-                                    src={showConfirmPassword ? hideIcon : showIcon} 
-                                    alt={showConfirmPassword ? "Hide password" : "Show password"} 
-                                    style={{ width: '20px', height: '20px' }} // Optional: basic sizing
-                                />
+                                <span className="material-symbols-outlined">
+                                    {showPassword ? "visibility_off" : "visibility"}
+                                </span>
                             </button>
                         </div>
                     </div>
