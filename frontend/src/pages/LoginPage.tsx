@@ -3,16 +3,13 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/LoadingSpinner";
 import "../styles/Form.css";
-import showIcon from "../assets/show.png";
-import hideIcon from "../assets/hide.png";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    // const [message, setMessage] = useState("");
-    // const [isError, setIsError] = useState(false);
+    const [localError, setLocalError] = useState("");
     const navigate = useNavigate();
     const location = useLocation();
     const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
@@ -35,9 +32,15 @@ const LoginPage = () => {
     }, [isAuthenticated, navigate, from]);
 
     useEffect(() => {
-        // Clear error when component unmounts
-        return () => clearError();
-    }, [clearError]);
+        if (error || localError) {
+            const timer = setTimeout(() => {
+                clearError();
+                setLocalError("");
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [error, localError, clearError]);
 
     // TODO: if the user manually changes the url to a page that the user is not supposed to access, show 404 page not found or smth liddat
     
@@ -97,17 +100,13 @@ const LoginPage = () => {
                                 disabled={isLoading}
                             />
 
-                            <button
-                                type="button"
-                                className="password-toggle"
+                            <button type="button" className="password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
                                 tabIndex={-1}
                             >
-                                <img
-                                    src={showPassword ? hideIcon : showIcon}
-                                    alt={showPassword ? "Hide password" : "Show password"}
-                                    style={{ width: '20px', height: '20px' }}
-                                />
+                                <span className="material-symbols-outlined">
+                                    {showPassword ? "visibility_off" : "visibility"}
+                                </span>
                             </button>
                         </div>
                     </div>

@@ -1,67 +1,49 @@
-html, 
-body, 
-#root {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden; 
-    position: fixed; 
-    overscroll-behavior: none; 
-}
-
-/* Light background for the body */
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-}
-
-/* Full-page wrapper to center the form */
-.full-height-center {
-    height: 100dvh;
+/* --- Layout Wrapper --- */
+.full-height-center.form {
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* padding: 1rem; */
-    box-sizing: border-box;
-    overflow: hidden;
+    background-color: oklch(0.985 0 0); 
+    padding: 2rem 0;
+    overflow-y: auto;
 }
 
-/* Card-style container */
+/* --- The Card --- */
 .form-card {
-    background-color: #ffffff;
-    border-radius: 12px;
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); 
     padding: 2.5rem;
     max-width: 440px;
     width: 100%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-/* Form title */
+/* --- Typography --- */
 .card-title {
     text-align: center;
     font-weight: 700;
     margin-bottom: 0.5rem;
     font-size: 1.75rem;
-    color: #1a202c;
+    color: var(--foreground);
 }
 
 .card-subtitle {
     text-align: center;
-    color: #718096;
+    color: var(--muted-foreground);
     margin-bottom: 2rem;
     font-size: 0.95rem;
 }
 
-/* Form stretches to container width */
+/* --- Forms & Inputs --- */
 form {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
 }
 
-/* Form groups */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -71,62 +53,106 @@ form {
 .form-group label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--foreground);
 }
 
-/* Inputs full width and styled */
+/* --- Password Box Fixes --- */
+
+/* 1. The Anchor: Must be relative to keep the eye INSIDE */
+.password-input-wrapper {
+    position: relative !important;
+    width: 100%;
+}
+
 input[type="text"], 
 input[type="email"], 
 input[type="password"] {
-    padding: 0.875rem;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    font-size: 1rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--input);
+    background-color: var(--background);
+    color: var(--foreground);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
     width: 100%;
     box-sizing: border-box;
-    transition: all 0.2s;
-    background: #fff;
+    transition: all 0.15s ease;
+    display: block;
+}
+
+/* 2. Padding-right ensures text doesn't hide behind the eye icon */
+.password-input-wrapper input {
+    padding-right: 2.5rem !important;
+}
+
+/* 3. The Eye: Positioned absolutely INSIDE the input */
+.password-toggle {
+    position: absolute !important;
+    right: 0.75rem; 
+    top: 50%;
+    transform: translateY(-50%);
+    
+    /* Reset button defaults */
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted-foreground);
+    z-index: 10;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--foreground);
+}
+
+.password-toggle .material-symbols-outlined {
+    font-size: 20px;
+    user-select: none;
 }
 
 input:focus {
     outline: none;
-    border-color: #0070f3;
-    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px var(--ring);
 }
 
-input:disabled {
-    background-color: #f3f4f6;
-    cursor: not-allowed;
-}
-
-/* Password input wrapper */
-.password-input-wrapper {
-    position: relative;
+/* --- Buttons --- */
+.form .btn-primary {
     display: flex;
     align-items: center;
-}
-
-.password-input-wrapper input {
-    padding-right: 3rem;
-}
-
-.password-toggle {
-    position: absolute;
-    right: 0.75rem;
-    background: none;
+    justify-content: center;
+    padding: 0.75rem;
     border: none;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
-    padding: 0.25rem;
-    font-size: 1.25rem;
-    color: #6b7280;
-    width: auto;
+    width: 100%;
+    transition: opacity 0.2s ease;
 }
 
-.password-toggle:hover {
-    color: #374151;
+.form .btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
 }
 
-/* Form row for checkbox and link */
+/* --- Links & Accents --- */
+.link-text {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.link-text:hover {
+    text-decoration: underline;
+}
+
+/* --- Layout Elements --- */
 .form-row {
     display: flex;
     justify-content: space-between;
@@ -139,113 +165,57 @@ input:disabled {
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
-    color: #374151;
 }
 
-.checkbox-label input[type="checkbox"] {
-    width: auto;
-    cursor: pointer;
-}
-
-/* Button full width and styled */
-.form .btn-primary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.875rem;
-    border-radius: 8px;
-    border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    width: 100%;
-    transition: all 0.2s;
-}
-
-.form .btn-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.form .btn-primary:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.form .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* Links */
-.link-text {
-    color: #0070f3;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.link-text:hover {
-    text-decoration: underline;
-}
-
-/* Messages below form */
-.message {
-    margin-top: 1rem;
-    padding: 0.875rem 1rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    text-align: left;
-}
-
-.message-error {
-    background-color: #fee;
-    color: #c53030;
-    border: 1px solid #feb2b2;
-}
-
-.message-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-/* Divider */
 .divider {
     display: flex;
     align-items: center;
     text-align: center;
     margin: 1.5rem 0;
-    color: #9ca3af;
-    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    text-transform: lowercase;
 }
 
 .divider::before,
 .divider::after {
     content: '';
     flex: 1;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
+}
+
+.footer-text {
+    text-align: center;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
 }
 
 .divider span {
     padding: 0 1rem;
+    background-color: var(--card);
+    position: relative;
+    top: -1px;
 }
 
-/* Footer text */
-.footer-text {
-    text-align: center;
-    color: #6b7280;
-    font-size: 0.875rem;
+.message-error {
+    background-color: oklch(0.95 0.05 25 / 0.1); 
+    color: var(--destructive); 
+    border: 1px solid var(--destructive);
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
     margin-top: 1rem;
+    display: block !important; /* Force display */
+    visibility: visible !important;
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-    .form-card {
-        padding: 1.5rem;
-    }
-
-    .card-title {
-        font-size: 1.5rem;
-    }
+.message-success {
+    background-color: oklch(0.95 0.05 145 / 0.1); 
+    color: oklch(0.5 0.15 145);
+    border: 1px solid oklch(0.5 0.15 145 / 0.3);
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    text-align: center;
+    font-weight: 500;
 }

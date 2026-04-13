@@ -26,8 +26,15 @@ const RegisterPage = () => {
     }, [isAuthenticated, navigate]);
 
     useEffect(() => {
-        return () => clearError();
-    }, [clearError]);
+        if (error || localError) {
+            const timer = setTimeout(() => {
+                clearError();
+                setLocalError("");
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [error, localError, clearError]);
 
     const validateForm = (): boolean => {
         setLocalError("");
