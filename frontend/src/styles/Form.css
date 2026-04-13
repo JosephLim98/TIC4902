@@ -1,0 +1,251 @@
+html, 
+body, 
+#root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; 
+    position: fixed; 
+    overscroll-behavior: none; 
+}
+
+/* Light background for the body */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+/* Full-page wrapper to center the form */
+.full-height-center {
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* padding: 1rem; */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Card-style container */
+.form-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 2.5rem;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Form title */
+.card-title {
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+    color: #1a202c;
+}
+
+.card-subtitle {
+    text-align: center;
+    color: #718096;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+/* Form stretches to container width */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Form groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Inputs full width and styled */
+input[type="text"], 
+input[type="email"], 
+input[type="password"] {
+    padding: 0.875rem;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s;
+    background: #fff;
+}
+
+input:focus {
+    outline: none;
+    border-color: #0070f3;
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+}
+
+input:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+}
+
+/* Password input wrapper */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1.25rem;
+    color: #6b7280;
+    width: auto;
+}
+
+.password-toggle:hover {
+    color: #374151;
+}
+
+/* Form row for checkbox and link */
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #374151;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+/* Button full width and styled */
+.form .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+}
+
+.form .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.form .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.form .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Links */
+.link-text {
+    color: #0070f3;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.link-text:hover {
+    text-decoration: underline;
+}
+
+/* Messages below form */
+.message {
+    margin-top: 1rem;
+    padding: 0.875rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    text-align: left;
+}
+
+.message-error {
+    background-color: #fee;
+    color: #c53030;
+    border: 1px solid #feb2b2;
+}
+
+.message-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+    padding: 0 1rem;
+}
+
+/* Footer text */
+.footer-text {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .form-card {
+        padding: 1.5rem;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+    }
+}

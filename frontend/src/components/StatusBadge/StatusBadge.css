@@ -1,0 +1,87 @@
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* Narrower gap for badges */
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px; /* Badges are usually smaller */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Base style for all Material Symbols in badges */
+.status-icon .material-symbols-outlined {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* transition: font-variation-settings 0.2s; */
+}
+
+.icon-fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+}
+
+.status-failed .material-symbols-outlined,
+.status-starting .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* --- Status Specifics --- */
+
+.status-running {
+    background: rgba(0, 230, 118, 0.1);
+    color: #00e676;
+    border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+/* Subtle pulse for the "Live" running dot */
+.status-running .status-icon {
+    animation: pulse 2s infinite;
+}
+
+.status-stopped {
+    background: rgba(255, 167, 38, 0.1);
+    color: #ffa726;
+    border: 1px solid rgba(255, 167, 38, 0.2);
+}
+
+.status-failed {
+    background: rgba(255, 82, 82, 0.1);
+    color: #ff5252;
+    border: 1px solid rgba(255, 82, 82, 0.2);
+}
+
+.status-starting {
+    background: rgba(66, 165, 245, 0.1);
+    color: #42a5f5;
+    border: 1px solid rgba(66, 165, 245, 0.2);
+}
+
+/* Spinning animation for the sync icon */
+.status-starting .status-icon {
+    animation: spin 2s linear infinite;
+}
+
+/* --- Animations --- */
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
