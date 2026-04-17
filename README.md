@@ -9,7 +9,6 @@ cd frontend
 ```
 Install the dependencies:
 ```bash
-nvm use
 npm install
 ```
 
@@ -60,6 +59,7 @@ cd backend
 ```
 Install dependencies
 ```
+nvm use
 npm install 
 ```
 Run the server
