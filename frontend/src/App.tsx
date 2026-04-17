@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthProvider'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import NotFoundPage from './pages/NotFoundPage'
 
 function AppLayout() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
             {/* These children will render inside the <main> or <Outlet /> of Layout */}
             <Route index element={<DashboardPage />} />
             <Route path="/deployments/:name" element={<DeploymentDetailPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
