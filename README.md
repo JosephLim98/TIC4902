@@ -9,6 +9,7 @@ cd frontend
 ```
 Install the dependencies:
 ```bash
+nvm use
 npm install
 ```
 
