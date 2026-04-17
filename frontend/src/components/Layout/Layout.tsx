@@ -1,3 +1,5 @@
+// USED FOR OLD DASHBOARD
+
 import React, { useState } from 'react';
 import type { ReactElement } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';

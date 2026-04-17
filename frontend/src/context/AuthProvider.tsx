@@ -5,12 +5,23 @@ import type { User, AuthContextType } from './AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-interface AuthProviderProps {
-    children: ReactNode;
-}
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [user, setUser] = useState<User | null>(() => {
+        const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
+        const token = localStorage.getItem('jwtToken') || sessionStorage.getItem('jwtToken');
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+        if (saved && token) {
+            try {
+                const parsed = JSON.parse(saved);
+                return { ...parsed, token};
+            } catch {
+                return null;
+            }
+        }
+
+        return null;
+    });
+
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -28,9 +39,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     if (isTokenValid(storedToken)) {
                         setUser({ ...parsedUser, token: storedToken });
                     } else {
-                        // Token expired, clear storage
-                        localStorage.removeItem('user');
-                        localStorage.removeItem('jwtToken');
+                        setError("Your session has expired. Please log in again.");
+                        logout();
                     }
                 }
             } catch (err) {
@@ -107,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/register', {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),
@@ -131,11 +141,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     const logout = () => {
-        setUser(null);
         localStorage.removeItem('user');
         localStorage.removeItem('jwtToken');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('jwtToken');
+        setUser(null);
     };
 
     const clearError = () => {

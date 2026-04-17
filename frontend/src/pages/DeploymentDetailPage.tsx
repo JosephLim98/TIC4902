@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getDeployment, deleteDeployment } from '@/api/flink'
+import { getDeployment } from '@/api/flink'
 import type { Deployment } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { formatDate } from '@/lib/utils'
+import { MaterialIcon } from '@/components/MaterialIcon'
+import { DEPLOYMENT_STATUS } from '../../../utils/constants'
+import { DeleteDeploymentDialog } from '@/components/DeletePipelineModal'
 
 interface InfoItemProps {
   label: string
@@ -51,28 +54,9 @@ export default function DeploymentDetailPage() {
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [deleting] = useState(false)
 
-  async function handleDelete() {
-    if (!name || !deployment) return
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${deployment.deploymentName}"? This will remove the Flink deployment from Kubernetes and cannot be undone.`
-    )
-    if (!confirmed) return
-
-    setDeleting(true)
-    setError(null)
-    try {
-      await deleteDeployment(name)
-      navigate('/')
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        || (err instanceof Error ? err.message : 'Failed to delete deployment.')
-      setError(message)
-      setDeleting(false)
-    }
-  }
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (!name) return
@@ -96,9 +80,7 @@ export default function DeploymentDetailPage() {
           onClick={() => navigate('/')}
           className="gap-1.5 text-zinc-500 hover:text-zinc-900 -ml-2 h-8"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M9 11 5 7l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <MaterialIcon name="chevron_backward" size={18} />
           Pipelines
         </Button>
       </div>
@@ -125,8 +107,8 @@ export default function DeploymentDetailPage() {
             <Button
               variant="destructive"
               className="px-6 py-3"
-              disabled={deployment.status === 'deleting' || deployment.status === 'deleted' || deleting}
-              onClick={handleDelete}
+              disabled={deployment.status === DEPLOYMENT_STATUS.DELETING || deployment.status === DEPLOYMENT_STATUS.DELETED}
+              onClick={() => setShowDeleteModal(true)}
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </Button>
@@ -173,6 +155,13 @@ export default function DeploymentDetailPage() {
           </div>
         </>
       )}
+
+      <DeleteDeploymentDialog
+        deployment={showDeleteModal ? deployment : null}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={() => navigate('/')}
+      />
+
     </div>
   )
 }

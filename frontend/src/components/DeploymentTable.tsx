@@ -10,24 +10,27 @@ import {
 import StatusBadge from './StatusBadge'
 import type { Deployment } from '@/types'
 import { formatDate } from '@/lib/utils'
+import { MaterialIcon } from './MaterialIcon'
+import { useState } from 'react'
+import { DeleteDeploymentDialog } from './DeletePipelineModal'
+import { DEPLOYMENT_STATUS } from '../../../utils/constants'
 
 interface Props {
   deployments: Deployment[]
+  onEdit?: (deployment: Deployment) => void
+  onDeleted?: () => void
 }
 
-export default function DeploymentTable({ deployments }: Props) {
+export default function DeploymentTable({ deployments, onEdit, onDeleted }: Props) {
   const navigate = useNavigate()
+
+  const [confirmDelete, setConfirmDelete] = useState<Deployment | null>(null)
 
   if (deployments.length === 0) {
     return (
       <div className="empty-state">
         <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-zinc-100">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <rect x="2" y="2" width="6" height="6" rx="1.5" stroke="#71717a" strokeWidth="1.4" />
-            <rect x="10" y="2" width="6" height="6" rx="1.5" stroke="#71717a" strokeWidth="1.4" />
-            <rect x="2" y="10" width="6" height="6" rx="1.5" stroke="#71717a" strokeWidth="1.4" />
-            <path d="M13 10v6M10 13h6" stroke="#71717a" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
+          <MaterialIcon name="dashboard_customize" />
         </div>
         <p className="text-sm font-medium text-zinc-700">No pipelines yet</p>
         <p className="mt-1 text-xs text-zinc-400">Create your first Flink deployment to get started</p>
@@ -36,41 +39,79 @@ export default function DeploymentTable({ deployments }: Props) {
   }
 
   return (
-    <div className="table-card">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-zinc-50 hover:bg-zinc-50">
-            <TableHead className="table-col-header w-[35%]">Name</TableHead>
-            <TableHead className="table-col-header">Status</TableHead>
-            <TableHead className="table-col-header">Mode</TableHead>
-            <TableHead className="table-col-header">Namespace</TableHead>
-            <TableHead className="table-col-header">Created</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {deployments.map((d) => (
-            <TableRow
-              key={d.id}
-              onClick={() => navigate(`/deployments/${d.deploymentName}`)}
-              className="cursor-pointer transition-colors hover:bg-zinc-50/80"
-            >
-              <TableCell className="font-mono text-sm font-medium text-zinc-900">
-                {d.deploymentName}
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={d.status} />
-              </TableCell>
-              <TableCell>
-                <span className="mode-badge">{d.deploymentMode}</span>
-              </TableCell>
-              <TableCell className="text-sm text-zinc-500">{d.namespace}</TableCell>
-              <TableCell className="whitespace-nowrap text-sm text-zinc-400">
-                {formatDate(d.createdAt)}
-              </TableCell>
+    <>
+      <div className="table-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-zinc-50 hover:bg-zinc-50">
+              <TableHead className="table-col-header w-[35%]">Name</TableHead>
+              <TableHead className="table-col-header">Status</TableHead>
+              <TableHead className="table-col-header">Mode</TableHead>
+              <TableHead className="table-col-header">Namespace</TableHead>
+              <TableHead className="table-col-header">Created</TableHead>
+              <TableHead className="table-col-header text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {deployments.map((d) => {
+              const isActionDisabled = d.status === DEPLOYMENT_STATUS.DELETED || d.status === DEPLOYMENT_STATUS.DELETING;
+              return (
+                <TableRow
+                  key={d.id}
+                  onClick={() => navigate(`/deployments/${d.deploymentName}`)}
+                  className="cursor-pointer transition-colors hover:bg-zinc-50/80"
+                >
+
+                  <TableCell className="font-mono text-sm font-medium text-zinc-900">
+                    {d.deploymentName}
+                  </TableCell>
+
+                  <TableCell>
+                    <StatusBadge status={d.status} />
+                  </TableCell>
+                  
+                  <TableCell>
+                    <span className="mode-badge">{d.deploymentMode}</span>
+                  </TableCell>
+                  
+                  <TableCell className="text-sm text-zinc-500">{d.namespace}</TableCell>
+                  
+                  <TableCell className="whitespace-nowrap text-sm text-zinc-400">
+                    {formatDate(d.createdAt)}
+                  </TableCell>
+                
+                  <TableCell className="text-right" onClick={ (e) => e.stopPropagation() }>
+                    <div className="flex items-center justify-end gap-1">
+
+                      {/* Edit */}
+                      <button disabled={isActionDisabled} onClick={() => onEdit?.(d)} title="Edit deployment" 
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-blue-100 hover:text-blue-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                        <MaterialIcon name="edit" size={18} />
+                      </button>
+
+                      {/* Delete */}
+                      <button disabled={isActionDisabled} onClick={() => {
+                        setConfirmDelete(d)
+                      }} title="Delete deployment" 
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                        <MaterialIcon name="delete" size={18} />
+                      </button>
+                    </div>
+                  </TableCell>
+
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Delete confirmation dialog */}
+      <DeleteDeploymentDialog
+        deployment={confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onSuccess={() => onDeleted?.()}
+      />
+    </>
   )
 }

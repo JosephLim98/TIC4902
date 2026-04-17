@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { Spinner } from "../components/Spinner";
 import "../styles/Form.css";
+import { MaterialIcon } from "@/components/MaterialIcon";
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -148,9 +149,7 @@ const RegisterPage = () => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 tabIndex={-1}
                             >
-                                <span className="material-symbols-outlined">
-                                    {showPassword ? "visibility_off" : "visibility"}
-                                </span>
+                                <MaterialIcon name={showPassword ? "visibility_off" : "visibility"} />
                             </button>
                         </div>
                     </div>
@@ -177,22 +176,13 @@ const RegisterPage = () => {
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 tabIndex={-1}
                             >
-                                <span className="material-symbols-outlined">
-                                    {showPassword ? "visibility_off" : "visibility"}
-                                </span>
+                                <MaterialIcon name={showConfirmPassword ? "visibility_off" : "visibility"} />
                             </button>
                         </div>
                     </div>
 
                     <button type="submit" disabled={isLoading} className="btn-primary">
-                        {isLoading ? (
-                            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: '0.5rem' }}>
-                                <LoadingSpinner size="small" />
-                                Creating account...
-                            </span>
-                        ) : (
-                            'Sign Up'
-                        )}
+                        {isLoading ? <Spinner message="Creating account..." light /> : 'Sign Up'}
                     </button>
                 </form>
 

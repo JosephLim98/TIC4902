@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { createDeployment, type CreateDeploymentPayload } from '@/api/flink'
+import { createDeployment, type CreateDeploymentPayload, updateDeployment, type UpdateDeploymentPayload } from '@/api/flink'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { MaterialIcon } from './MaterialIcon'
+import type { Deployment } from '@/types'
+import type { FlinkMode } from '../../../utils/constants'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
   onCreated: () => void
+  initialData?: Deployment | null
 }
 
 interface FormState {
@@ -119,26 +123,46 @@ function buildPayload(f: FormState): CreateDeploymentPayload {
   return p
 }
 
-export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Props) {
+export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, initialData }: Props) {
   const [form, setForm] = useState<FormState>(INITIAL)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setForm(INITIAL)
+      if (initialData) {
+        // Populate form for edit mode
+        setForm({
+          deploymentName: initialData.deploymentName || '',
+          namespace: initialData.namespace || '',
+          mode: initialData.deploymentMode as FlinkMode,
+          jarName: initialData.jarName || '',
+          flinkVersion: initialData.config?.flinkVersion || '',
+          image: initialData.config?.image || '',
+          jobParallelism: String(initialData.jobParallelism || ''),
+          serviceAccount: initialData.config?.serviceAccount || '',
+          jmMemory: initialData.config?.jobManager?.memory || '',
+          jmCpu: String(initialData.config?.jobManager?.cpu || ''),
+          tmMemory: initialData.config?.taskManager?.memory || '',
+          tmCpu: String(initialData.config?.taskManager?.cpu || ''),
+          tmReplicas: String(initialData.config?.taskManager?.replicas || ''),
+          tmTaskSlots: String(initialData.config?.taskManager?.taskSlots || ''),
+        })
+      } else {
+        setForm(INITIAL)
+      }
       setErrors({})
       setTouched({})
       setShowAdvanced(false)
-      setApiError(null)
+      setServerError(null)
       setSubmitting(false)
       setTimeout(() => nameRef.current?.focus(), 60)
     }
-  }, [isOpen])
+  }, [isOpen, initialData])
 
   useEffect(() => {
     if (!isOpen) return
@@ -171,17 +195,46 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
     if (Object.values(errs).some(Boolean)) return
 
     setSubmitting(true)
-    setApiError(null)
+    setServerError(null);
+
     try {
-      const deployment = await createDeployment(buildPayload(form))
+      if (initialData) {
+        // Edit mode 
+        // Immutable fields such as namespace, flinkVersion, serviceAccount, deploymentName, deploymentMode and jarName are excluded from the payload
+        const cfg: UpdateDeploymentPayload['config'] = {}
+        
+        if (form.image) { cfg.image = form.image }
+
+        const jm: NonNullable<typeof cfg.jobManager> = {}
+        if (form.jmMemory) { jm.memory = form.jmMemory }
+        if (form.jmCpu) { jm.cpu = Number(form.jmCpu) }
+        if (Object.keys(jm).length) { cfg.jobManager = jm }
+
+        const tm: NonNullable<typeof cfg.jobManager> = {}
+        if (form.tmMemory) { tm.memory = form.tmMemory; }
+        if (form.tmCpu) { tm.cpu = Number(form.tmCpu); }
+        if (form.tmReplicas) { tm.replicas = Number(form.tmReplicas) }
+        if (form.tmTaskSlots) { tm.taskSlots = Number(form.tmTaskSlots) }
+        if (Object.keys(tm).length) { cfg.taskManager = tm }
+
+        const payload: UpdateDeploymentPayload = {}
+        if (form.jobParallelism) { payload.jobParallelism = Number(form.jobParallelism) }
+        if (Object.keys(cfg).length) { payload.config = cfg }
+
+        console.log('Updating deployment with payload: ', payload)
+        await updateDeployment(initialData.deploymentName, payload)
+      } else {
+        await createDeployment(buildPayload(form))
+      }
       onCreated()
       onClose()
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Failed to create pipeline. Check the values and try again.'
-      setApiError(msg)
-    } finally {
+    } catch (err: any) {
+      const message = err.response?.data?.error || err.response?.data?.message || err.message || "An unexpected error occurred";
+        // (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        // `Failed to ${initialData ? 'update' : 'create'} pipeline. Check the values and try again.`
+      setServerError(message);
+        // setServerError(typeof message === 'object' ? JSON.stringify(message) : message);
+    } finally { 
       setSubmitting(false)
     }
   }
@@ -191,23 +244,32 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] transition-opacity duration-200 ${
-          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       />
 
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Create Pipeline"
-        className={`fixed inset-y-0 right-0 z-50 flex w-[480px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        aria-label={initialData ? 'Edit Pipeline' : 'Create Pipeline'}
+        className={`fixed inset-y-0 right-0 z-50 flex w-[480px] flex-col bg-white transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full shadow-none'  // ← shadow only when open
         }`}
       >
         <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
           <div>
-            <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">Create Pipeline</h2>
-            <p className="mt-0.5 text-xs text-zinc-400">Deploy a new Apache Flink job to Kubernetes</p>
+            <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">
+              {initialData ? 'Edit Pipeline' : 'Create Pipeline'}
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              {initialData
+                ? `Update configuration for ${initialData.deploymentName}`
+                : 'Deploy a new Apache Flink job to Kubernetes'
+              }
+            </p>
+            {/* <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">Create Pipeline</h2>
+            <p className="mt-0.5 text-xs text-zinc-400">Deploy a new Apache Flink job to Kubernetes</p> */}
           </div>
           <button
             type="button"
@@ -215,9 +277,7 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
             className="flex size-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
             aria-label="Close"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
+            <MaterialIcon name="close" />
           </button>
         </div>
 
@@ -225,9 +285,12 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
             <section className="space-y-4">
-              <SectionHeading icon={<GridIcon />} label="Basic" />
+              <SectionHeading icon={<MaterialIcon name="grid_view" size={14} />} label="Basic" />
 
-              <Field label="Pipeline Name">
+              <Field label="Pipeline Name" error={errors.deploymentName}>
+                {/* Since the Pipeline Name is the unique identifier (PK) in the database and the name of the CRD in K8s, we should not change the name. 
+                    Changing the name will result in the patch call trying to find a resource with the new name, which will return a 404 Not Found error
+                    Hence, we will disable this field during update. */}
                 <Input
                   ref={nameRef}
                   aria-invalid={!!errors.deploymentName}
@@ -236,9 +299,14 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                   onChange={e => set('deploymentName', e.target.value)}
                   onBlur={() => blur('deploymentName')}
                   spellCheck={false}
+                  disabled={!!initialData}    // Read only if updating
+                  className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
                 />
               </Field>
 
+              {/* In K8s, we cannot move an existing object from one namespace to another. 
+                  Updating this field will result in the backend trying to look for the original namespace in the new namespace. It will fail to find the object and crash. 
+                  Hence, we will disable this field during update. */}
               <Field label="Namespace">
                 <Input
                   aria-invalid={!!errors.namespace}
@@ -247,6 +315,8 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                   onChange={e => set('namespace', e.target.value)}
                   onBlur={() => blur('namespace')}
                   spellCheck={false}
+                  disabled={!!initialData}
+                  className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
                 />
               </Field>
 
@@ -256,22 +326,31 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                     <button
                       key={m}
                       type="button"
-                      onClick={() => set('mode', m)}
+                      onClick={() => !initialData && set('mode', m)}
+                      disabled={!!initialData}
                       className={`px-4 py-1.5 text-xs font-medium capitalize transition-colors ${
                         form.mode === m
                           ? 'bg-zinc-900 text-white'
                           : 'bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
-                      }`}
+                      } ${initialData ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {m}
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[11px] text-zinc-400">
-                  {form.mode === 'session'
-                    ? 'Shared cluster for multiple jobs, no jar required.'
-                    : 'Dedicated cluster per job, jar name required.'}
-                </p>
+
+                {initialData ? (
+                  <p className="mt-1.5 text-[11px] text-zinc-400">
+                    Deployment mode cannot be changed after creation.
+                  </p>
+                ) : (
+                  <p>
+                    {/* {form.mode === 'session'
+                      ? 'Shared cluster for multiple jobs, no jar required.'
+                      : 'Dedicated cluster per job, jar name required.'} */}
+                  </p>
+                )}
+                
               </Field>
 
               {form.mode === 'application' && (
@@ -283,7 +362,12 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                     onChange={e => set('jarName', e.target.value)}
                     onBlur={() => blur('jarName')}
                     spellCheck={false}
+                    disabled={!!initialData}
+                    className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
                   />
+                  {initialData && (
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Jar name cannot be changed after creation.</p>
+                  )}
                 </Field>
               )}
 
@@ -300,20 +384,30 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                 onClick={() => setShowAdvanced(v => !v)}
                 className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:text-zinc-600"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-                  className={`transition-transform duration-200 ${showAdvanced ? 'rotate-90' : ''}`}>
-                  <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <span 
+                  className={`material-symbols-outlined transition-transform duration-200 ${
+                    showAdvanced ? 'rotate-90' : ''
+                  }`}
+                  style={{ fontSize: '15px' }}
+                >
+                  chevron_right
+                </span>
                 Advanced
               </button>
 
               {showAdvanced && (
                 <div className="mt-3 space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Flink Version">
+                    <Field label="Flink Version" error={initialData ? undefined : errors.flinkVersion}>
                       <Input aria-invalid={!!errors.flinkVersion} placeholder="v1_19"
                         value={form.flinkVersion} onChange={e => set('flinkVersion', e.target.value)}
-                        onBlur={() => blur('flinkVersion')} spellCheck={false} />
+                        onBlur={() => blur('flinkVersion')} spellCheck={false} 
+                        disabled={!!initialData}
+                        className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
+                      />
+                      {initialData && (
+                        <p className="text-[11px] text-zinc-400 mt-0.5">Changing Flink version requires a new deployment.</p>
+                      )}
                     </Field>
                     <Field label="Container Image">
                       <Input aria-invalid={!!errors.image} placeholder="flink:1.19"
@@ -361,13 +455,33 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
                   <Field label="Service Account">
                     <Input aria-invalid={!!errors.serviceAccount} placeholder="flink-service-account"
                       value={form.serviceAccount} onChange={e => set('serviceAccount', e.target.value)}
-                      onBlur={() => blur('serviceAccount')} spellCheck={false} />
+                      onBlur={() => blur('serviceAccount')} spellCheck={false} 
+                      disabled={!!initialData} className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
+                    />
+                    {initialData && (
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Service account is immutable after creation.</p>
+                    )}
                   </Field>
                 </div>
               )}
             </section>
+            
+            {serverError && (<div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
+              <MaterialIcon name="error" size={14} className="mt-0.5 shrink-0" />
+              <span>{serverError}</span>
+              </div>
+            )}
+            
+            {/* {serverError && <div className="error-banner">{serverError}</div>} */}
 
-            {apiError && <div className="error-banner">{apiError}</div>}
+            {/* {serverError && (
+              <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
+                <MaterialIcon name="error" className="size-4 mt-0.5" />
+                <span>{serverError}</span>
+              </div>
+            )} */}
+            
+            {/* {apiError && <div className="error-banner">{apiError}</div>} */}
           </div>
 
           <div className="flex items-center justify-end gap-2.5 border-t border-zinc-100 px-6 py-4">
@@ -376,7 +490,11 @@ export default function CreatePipelineModal({ isOpen, onClose, onCreated }: Prop
             </Button>
             <Button type="submit" size="sm" disabled={submitting} className="gap-2">
               {submitting && <span className="size-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
-              {submitting ? 'Creating…' : 'Create Pipeline'}
+              {submitting 
+                ? (initialData ? 'Updating...' : 'Creating...') 
+                : (initialData ? 'Save Changes' : 'Create Pipeline')
+              }
+              {/* {submitting ? 'Creating...' : 'Create Pipeline'} */}
             </Button>
           </div>
         </form>
@@ -395,23 +513,16 @@ function SectionHeading({ icon, label }: { icon: React.ReactNode; label: string 
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <label className="text-xs font-medium text-zinc-600">{label}</label>
       {children}
+      {error && (
+        <p className="text-[11px] font-medium text-red-500 animate-in fade-in slide-in-from-top-1">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
-
-function GridIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-      <rect x="0.5" y="0.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="6.5" y="0.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="0.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      <rect x="6.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-    </svg>
-  )
-}
-

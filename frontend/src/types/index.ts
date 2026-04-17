@@ -1,3 +1,4 @@
+import type { DeploymentStatus } from '../../../utils/constants.js';
 
 export interface JobManagerConfig {
   memory: string;
@@ -22,7 +23,6 @@ export interface DeploymentConfig {
   flinkConfiguration?: Record<string, string>;
 }
 
-export type DeploymentStatus = 'creating' | 'running' | 'failed' | 'deleting' | 'deleted';
 export type DeploymentMode = 'session' | 'application';
 
 export interface Deployment {
@@ -34,6 +34,7 @@ export interface Deployment {
   config: DeploymentConfig;
   createdAt: string;
   environmentVariables?: Record<string, string>;
+  jarName?: string;
   jobParallelism?: number;
   kubernetesStatus?: Record<string, unknown>;
   flinkDeployment?: {

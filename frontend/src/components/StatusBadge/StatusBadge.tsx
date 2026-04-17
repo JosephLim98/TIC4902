@@ -1,3 +1,5 @@
+// USED FOR OLD DASHBOARD
+
 import React, { type JSX } from 'react';
 import './StatusBadge.css';
 

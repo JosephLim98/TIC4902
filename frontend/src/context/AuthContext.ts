@@ -1,7 +1,4 @@
 import { createContext } from 'react';
-// import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// import React, { createContext, useContext, useState, useEffect } from 'react';
-// import type { ReactNode } from 'react';
 
 export interface User {
     username: string;
@@ -20,5 +17,4 @@ export interface AuthContextType {
     clearError: () => void;
 }
 
-// const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

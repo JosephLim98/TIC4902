@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { Spinner } from "../components/Spinner";
 import "../styles/Form.css";
+import { MaterialIcon } from "@/components/MaterialIcon";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
@@ -104,9 +105,7 @@ const LoginPage = () => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 tabIndex={-1}
                             >
-                                <span className="material-symbols-outlined">
-                                    {showPassword ? "visibility_off" : "visibility"}
-                                </span>
+                                <MaterialIcon name={showPassword ? "visibility_off" : "visibility"} />
                             </button>
                         </div>
                     </div>
@@ -121,15 +120,12 @@ const LoginPage = () => {
                             />
                             <span>Remember Me</span>
                         </label>
-                        <a href="#" className="link-text">Forgot Password?</a>
+                        {/* <a href="#" className="link-text">Forgot Password?</a> */}
                     </div>
 
                     <button type="submit" disabled={isLoading} className="btn-primary">
                         {isLoading ? (
-                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'}}>
-                                <LoadingSpinner size="small" />
-                                Signing in...
-                            </span>
+                            <Spinner message="Signing in..." light />
                         ) : (
                             'Sign In'
                         )}

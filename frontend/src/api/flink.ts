@@ -1,13 +1,15 @@
 import client from './client';
 import type { Deployment, ListDeploymentsResponse } from '../types';
 
+const DEPLOYMENTS_ENDPOINT = '/flink/deployments';
+
 export async function listDeployments(signal?: AbortSignal): Promise<ListDeploymentsResponse> {
-  const { data } = await client.get<ListDeploymentsResponse>('/api/flink/deployments', { signal });
+  const { data } = await client.get<ListDeploymentsResponse>(DEPLOYMENTS_ENDPOINT, { signal });
   return data;
 }
 
 export async function getDeployment(name: string, signal?: AbortSignal): Promise<Deployment> {
-  const { data } = await client.get<Deployment>(`/api/flink/deployments/${name}`, { signal });
+  const { data } = await client.get<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}`, { signal });
   return data;
 }
 
@@ -28,12 +30,30 @@ export interface CreateDeploymentPayload {
   };
 }
 
+// Fields such as namespace, flinkVersion, serviceAccount are intentionally excluded from updates. They are immutable post-create
+// Changing the deploymentName, deploymentMode, jarName, or jarId would require a new deployment
+export interface UpdateDeploymentPayload {
+  jobParallelism?: number;
+  environmentVariables?: Record<string, string>;
+  config?: {
+    image?: string;
+    jobManager?: { memory?: string; cpu?: number; replicas?: number };
+    taskManager?: { memory?: string; cpu?: number; replicas?: number; taskSlots?: number };
+    flinkConfiguration?: Record<string, string>;
+  };
+}
+
 export async function createDeployment(payload: CreateDeploymentPayload): Promise<Deployment> {
-  const { data } = await client.post<Deployment>('/api/flink/deployments', payload);
+  const { data } = await client.post<Deployment>(DEPLOYMENTS_ENDPOINT, payload);
+  return data;
+}
+
+export async function updateDeployment(name: string, payload: UpdateDeploymentPayload): Promise<Deployment> {
+  const { data } = await client.put<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}`, payload);
   return data;
 }
 
 export async function deleteDeployment(name: string): Promise<Deployment> {
-  const { data } = await client.delete<Deployment>(`/api/flink/deployments/${name}`);
+  const { data } = await client.delete<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}`);
   return data;
 }
