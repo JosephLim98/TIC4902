@@ -2,7 +2,10 @@
 set -e
 
 # Start minikube if not running
-minikube status > /dev/null 2>&1 || minikube start --driver=docker --memory=4096 --cpus=2
+if ! kubectl cluster-info > /dev/null 2>&1; then
+  echo "Cluster unreachable. Starting/Restarting Minikube..."
+  minikube start --driver=docker --memory=4096 --cpus=2
+fi
 
 # Install cert-manager
 kubectl get namespace cert-manager > /dev/null 2>&1 || {
