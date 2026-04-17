@@ -1,0 +1,807 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TIC4902 Backend API",
+    "version": "1.0.0",
+    "description": "REST API for Flink deployment management and authentication. DNS-style names (`deploymentName`, `namespace`, `jarName`) must be lowercase alphanumeric with optional internal hyphens (1–63 chars). Memory fields use a number plus unit, e.g. `1024m`, `2g`."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Service liveness"
+    },
+    {
+      "name": "Auth",
+      "description": "User registration and login"
+    },
+    {
+      "name": "Flink",
+      "description": "Flink deployment CRUD (requires working Kubernetes / Flink operator for mutating operations)"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new user",
+        "operationId": "registerUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSuccessUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email or username already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Login successful (JWT in `data.token`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSuccessLogin"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments": {
+      "get": {
+        "tags": [
+          "Flink"
+        ],
+        "summary": "List deployments",
+        "operationId": "listDeployments",
+        "responses": {
+          "200": {
+            "description": "List of deployments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Flink"
+        ],
+        "summary": "Create deployment",
+        "description": "Session mode by default; if `jarName` or `jarId` is set, application mode is used. `namespace`, `jarName`: DNS label pattern, 1–63 chars. `jobParallelism`: 1–1024. `config.jobManager.replicas` must be 1 if set.",
+        "operationId": "createDeployment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Deployment created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Flink"
+        ],
+        "summary": "Get deployment by name",
+        "operationId": "getDeployment",
+        "responses": {
+          "200": {
+            "description": "Deployment found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Flink"
+        ],
+        "summary": "Update deployment",
+        "description": "At least one field required. Immutable after create: `namespace`, `deploymentName`, Flink version, `serviceAccount`, job type fields (`jarName`, `jarId`, etc.) — use delete + create instead.",
+        "operationId": "updateDeployment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deployment updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or empty body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Flink"
+        ],
+        "summary": "Delete deployment",
+        "operationId": "deleteDeployment",
+        "responses": {
+          "200": {
+            "description": "Deployment deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "message": {
+            "type": "string",
+            "example": "Server is running"
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Message (500 responses use generic text)"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "AuthEnvelope": {
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "nullable": true
+          }
+        }
+      },
+      "AuthSuccessUser": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AuthEnvelope"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "integer",
+                "example": 201
+              },
+              "message": {
+                "type": "string",
+                "example": "User created successfully"
+              },
+              "data": {
+                "$ref": "#/components/schemas/UserPublic"
+              }
+            }
+          }
+        ]
+      },
+      "AuthSuccessLogin": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AuthEnvelope"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "integer",
+                "example": 201
+              },
+              "message": {
+                "type": "string",
+                "example": "User logged in successfully"
+              },
+              "data": {
+                "$ref": "#/components/schemas/LoginData"
+              }
+            }
+          }
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "description": "Minimum 6 characters"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserPublic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LoginData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT"
+          }
+        }
+      },
+      "DnsLabel": {
+        "type": "string",
+        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+        "minLength": 1,
+        "maxLength": 63,
+        "description": "Lowercase DNS label"
+      },
+      "MemoryString": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*(m|g|M|G)$",
+        "description": "Memory amount with unit (e.g. 1024m, 2g)"
+      },
+      "JobManagerSpec": {
+        "type": "object",
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/MemoryString"
+          },
+          "cpu": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 32
+          },
+          "replicas": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          }
+        }
+      },
+      "TaskManagerSpec": {
+        "type": "object",
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/MemoryString"
+          },
+          "cpu": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 32
+          },
+          "replicas": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "taskSlots": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+          }
+        }
+      },
+      "FlinkConfigCreate": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string"
+          },
+          "flinkVersion": {
+            "type": "string"
+          },
+          "serviceAccount": {
+            "type": "string"
+          },
+          "jobManager": {
+            "$ref": "#/components/schemas/JobManagerSpec"
+          },
+          "taskManager": {
+            "$ref": "#/components/schemas/TaskManagerSpec"
+          },
+          "flinkConfiguration": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "FlinkConfigUpdate": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string"
+          },
+          "jobManager": {
+            "$ref": "#/components/schemas/JobManagerSpec"
+          },
+          "taskManager": {
+            "$ref": "#/components/schemas/TaskManagerSpec"
+          },
+          "flinkConfiguration": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "DeploymentCreateRequest": {
+        "type": "object",
+        "required": [
+          "deploymentName"
+        ],
+        "properties": {
+          "deploymentName": {
+            "$ref": "#/components/schemas/DnsLabel"
+          },
+          "namespace": {
+            "$ref": "#/components/schemas/DnsLabel"
+          },
+          "jarName": {
+            "$ref": "#/components/schemas/DnsLabel"
+          },
+          "jarId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "environmentVariables": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "jobParallelism": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "config": {
+            "$ref": "#/components/schemas/FlinkConfigCreate"
+          }
+        }
+      },
+      "DeploymentUpdateRequest": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "environmentVariables": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "jobParallelism": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "config": {
+            "$ref": "#/components/schemas/FlinkConfigUpdate"
+          }
+        }
+      },
+      "FlinkDeploymentRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "string"
+          },
+          "apiVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "Deployment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "deploymentName": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "deploymentMode": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kubernetesStatus": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Live status from Kubernetes operator when available"
+          },
+          "flinkDeployment": {
+            "$ref": "#/components/schemas/FlinkDeploymentRef"
+          },
+          "environmentVariables": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "jobParallelism": {
+            "type": "integer"
+          },
+          "jar": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Present on some create responses when JAR metadata is returned"
+          }
+        }
+      },
+      "DeploymentListResponse": {
+        "type": "object",
+        "required": [
+          "deployments",
+          "total"
+        ],
+        "properties": {
+          "deployments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Deployment"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

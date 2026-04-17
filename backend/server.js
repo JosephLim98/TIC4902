@@ -1,10 +1,11 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import initDatabase from "./src/db/init.js";
 import { initializeDatabase } from "./src/config/database.js";
-import routes from './src/routes/index.js';
-import errorHandler from './src/middleware/errorHandler.js';
+import initDatabase from "./src/db/init.js";
+import { mountSwagger } from "./src/docs/serveSwagger.js";
+import errorHandler from "./src/middleware/errorHandler.js";
+import routes from "./src/routes/index.js";
 
 dotenv.config();
 
@@ -21,6 +22,8 @@ app.use("/api", routes);
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
+
+mountSwagger(app);
 
 app.use(errorHandler);
 

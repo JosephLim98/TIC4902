@@ -67,6 +67,17 @@ Run the server
 npm run dev
 ```
 
+### API documentation (OpenAPI + Swagger UI)
+
+The backend exposes **interactive API documentation** powered by OpenAPI 3 and Swagger UI. After `npm run dev`, open **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)** in a browser. The machine-readable spec is at **[http://localhost:3000/api-docs.json](http://localhost:3000/api-docs.json)** (for Postman import, codegen, or CI). The OpenAPI document lives in `backend/src/docs/openapi.json`.
+
+**How to use `/api-docs`:**
+
+1. Pick a **tag** (Health, Auth, Flink) and expand an operation.
+2. Read the summary, parameters, and example **Request body** / responses.
+3. Click **Try it out**, edit path or JSON fields if needed, then **Execute**. The response body and HTTP status appear below.
+4. If your API is not on `localhost:3000`, change the **Servers** dropdown at the top (or edit `servers` in `openapi.json` for your environment).
+
 ### API - Get Flink Deployment
 
 **List all deployments:**
