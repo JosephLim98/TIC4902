@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
+import { FLINK_MODE } from '../../../utils/constants.ts';
+import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
 
 const Deployment = sequelize.define('Deployment', {
     id: {
@@ -25,7 +27,7 @@ const Deployment = sequelize.define('Deployment', {
         }
       },
       status: {
-        type: DataTypes.ENUM('creating', 'running', 'failed', 'deleting', 'deleted'),
+        type: DataTypes.ENUM(...Object.values(DEPLOYMENT_STATUS)),
         allowNull: false,
         defaultValue: 'creating'
       },
@@ -33,7 +35,7 @@ const Deployment = sequelize.define('Deployment', {
         type: DataTypes.JSONB,
         allowNull: false
       },
-      reosurces: {
+      resources: {
         type: DataTypes.JSONB,
         allowNull: true
       },
@@ -43,9 +45,9 @@ const Deployment = sequelize.define('Deployment', {
         field: 'error_message'
       },
       deploymentMode: {
-        type: DataTypes.ENUM('session', 'application'),
+        type: DataTypes.ENUM(...Object.values(FLINK_MODE)),
         allowNull: false,
-        defaultValue: 'session',
+        defaultValue: FLINK_MODE.SESSION,
         field: 'deployment_mode'
       },
       jarId: {

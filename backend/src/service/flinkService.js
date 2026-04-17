@@ -2,7 +2,8 @@ import sequelize from '../config/database.js';
 import { FlinkConfig } from '../models/flinkConfigModel.js';
 import { Deployment } from '../models/index.js';
 import logger from '../utils/logger.js';
-import { DEPLOYMENT_STATUS, FLINK_LIFECYCLE_TO_STATUS } from '../utils/constants.js';
+import { FLINK_LIFECYCLE_TO_STATUS } from '../utils/constants.js';
+import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
 import * as k8sService from './kubernetesService.js';
 import { ConflictError, KubernetesError, NotFoundError, ValidationError } from '../utils/errors.js';
 
@@ -191,4 +192,71 @@ export async function getDeployment(deploymentName) {
 export async function listDeployments() {
     const deployments = await Deployment.findAll({ order: [['created_at', 'DESC']] });
     return Promise.all(deployments.map(d => syncDeployment(d)));
+}
+
+export async function updateDeployment(deploymentName, updateData) {
+  const deployment = await Deployment.findOne({ where: { deploymentName } });
+  if (!deployment) {
+    throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+  }
+  if ([DEPLOYMENT_STATUS.DELETED, DEPLOYMENT_STATUS.DELETING].includes(deployment.status)) {
+    throw new ConflictError(`Cannot update a deployment in status '${deployment.status}'`, deploymentName);
+  }
+
+  // Immutable fields (namespace, flinkVersion, serviceAccount, deploymentMode, deploymentName) are intentionally excluded from updateData by the validator. We should not overwrite them here.
+  const existingConfig = deployment.config;
+  const mergedConfig = {
+    // Preserve all existing top-level config fields (includes immutable: namespace, flinkVersion, serviceAccount which should never change after creation)
+    ...existingConfig,
+
+    // Only allow image to be patched at top level
+    ...(updateData.config?.image !== undefined && { image: updateData.config.image }),
+    jobManager: { ...existingConfig.jobManager, ...updateData.config?.jobManager },
+    taskManager: { ...existingConfig.taskManager, ...updateData.config?.taskManager },
+
+    // Deep-merge flinkConfiguration so collers can add/override individual keys without wiping out keys they didn't mention
+    flinkConfiguration: {
+      ...existingConfig.flinkConfiguration,
+      ...updateData.config?.flinkConfiguration
+    }
+
+  };
+
+  // console.log('FINAL MERGED CONFIG: ', JSON.stringify(mergedConfig, null, 2));
+
+  const newParallelism = updateData.jobParallelism ?? deployment.jobParallelism;
+  validateParallelism(newParallelism, mergedConfig.taskManager);
+
+  const transaction = await sequelize.transaction();
+  try {
+    await deployment.update({
+      // namespace is intentionally omitted - immutable in Kubernetes
+      config: mergedConfig,
+      ...(updateData.environmentVariables !== undefined && { environmentVariables: updateData.environmentVariables }),
+      ...(updateData.jobParallelism !== undefined && { jobParallelism: updateData.jobParallelism }),
+    }, { transaction });
+    
+    try {
+      await k8sService.patchFlinkDeployment(
+        deploymentName,
+        deployment.namespace,
+        mergedConfig,
+        updateData.environmentVariables ?? deployment.environmentVariables,
+      );
+    } catch (k8sError) {
+      logger.error('K8s patch failed', { deploymentName, error: k8sError.message });
+      throw new KubernetesError(k8sError.message, k8sError);
+    }
+  
+    await transaction.commit();
+    logger.info('Deployment updated successfully', { deploymentName });
+    await deployment.reload();
+    return deployment.toJSON();
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    throw error;
+  }
+
 }

@@ -4,7 +4,7 @@ import pool from "../config/db.js";
 
 export function generateToken(user) {
     return jwt.sign({user}, process.env.JWT_SECRET, {
-        expiresIn: "15m",
+        expiresIn: "1h",        // TODO: Changed to 1h for development/testing purposes. To be changed back to 15min
     });
 }
 

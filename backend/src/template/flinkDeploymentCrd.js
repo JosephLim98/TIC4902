@@ -1,4 +1,6 @@
-import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS } from "../utils/constants.js";
+import { FLINK_CRD } from "../utils/constants.js";
+import { FLINK_MODE } from "../../../utils/constants.ts";
+import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
 
 export function generateFlinkDeployment(deploymentName, namespace, config, jarSpec = null, environmentVariables = null) {
     const { image, flinkVersion, serviceAccount, jobManager, taskManager } = config;

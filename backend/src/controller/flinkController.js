@@ -80,3 +80,15 @@ export async function listDeployments(req, res, next) {
         next(error);
     }
 }
+
+export async function updateDeployment(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        console.log('BACKEND RECEIVED BODY: ', JSON.stringify(req.body, null, 2));
+        logger.info('Received deployment update request', { deploymentName });
+        const deployment = await flinkService.updateDeployment(deploymentName, req.body);
+        res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
