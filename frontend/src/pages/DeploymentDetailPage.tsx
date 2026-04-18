@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils'
 import { MaterialIcon } from '@/components/MaterialIcon'
 import { DEPLOYMENT_STATUS } from '../../../utils/constants'
 import { DeleteDeploymentDialog } from '@/components/DeletePipelineModal'
+import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal'
 
 interface InfoItemProps {
   label: string
@@ -56,6 +57,7 @@ export default function DeploymentDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleting] = useState(false)
 
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -104,14 +106,27 @@ export default function DeploymentDetailPage() {
               </h1>
               <StatusBadge status={deployment.status} />
             </div>
-            <Button
-              variant="destructive"
-              className="px-6 py-3"
-              disabled={deployment.status === DEPLOYMENT_STATUS.DELETING || deployment.status === DEPLOYMENT_STATUS.DELETED}
-              onClick={() => setShowDeleteModal(true)}
-            >
-              {deleting ? 'Deleting…' : 'Delete'}
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="px-6 py-3"
+                disabled={deployment.status === DEPLOYMENT_STATUS.DELETING || deployment.status === DEPLOYMENT_STATUS.DELETED}
+                onClick={() => { setShowEditModal(true) }}
+              >
+                <MaterialIcon name="edit" size={18} className="mr-2" />
+                Edit
+              </Button>
+
+              <Button
+                variant="destructive"
+                className="px-6 py-3"
+                disabled={deployment.status === DEPLOYMENT_STATUS.DELETING || deployment.status === DEPLOYMENT_STATUS.DELETED}
+                onClick={() => setShowDeleteModal(true)}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
           </div>
 
           {deployment.errorMessage && (
@@ -156,6 +171,17 @@ export default function DeploymentDetailPage() {
         </>
       )}
 
+      <CreateUpdatePipelineModal 
+        isOpen={showEditModal}
+        initialData={showEditModal ? deployment : null}
+        onClose={() => setShowEditModal(false)}
+        onCreated={() => {
+          setShowEditModal(false)
+          navigate('/')
+        }
+        }
+      />
+      
       <DeleteDeploymentDialog
         deployment={showDeleteModal ? deployment : null}
         onClose={() => setShowDeleteModal(false)}
