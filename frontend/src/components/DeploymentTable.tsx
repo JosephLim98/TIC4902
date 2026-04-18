@@ -14,13 +14,18 @@ import { MaterialIcon } from './MaterialIcon'
 import { useState } from 'react'
 import { DeleteDeploymentDialog } from './DeletePipelineModal'
 import { DEPLOYMENT_STATUS } from '../../../utils/constants'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   deployments: Deployment[]
   onEdit?: (deployment: Deployment) => void
   onDeleted?: () => void
+  // onStart?: (deployment: Deployment) => void
+  // onStop?: (deployment: Deployment) => void
+  // onForceStop?: (deployment: Deployment) => void
 }
 
+// export default function DeploymentTable({ deployments, onEdit, onDeleted, onStart, onStop, onForceStop }: Props) {
 export default function DeploymentTable({ deployments, onEdit, onDeleted }: Props) {
   const navigate = useNavigate()
 
@@ -49,7 +54,7 @@ export default function DeploymentTable({ deployments, onEdit, onDeleted }: Prop
               <TableHead className="table-col-header">Mode</TableHead>
               <TableHead className="table-col-header">Namespace</TableHead>
               <TableHead className="table-col-header">Created</TableHead>
-              <TableHead className="table-col-header text-right">Actions</TableHead>
+              <TableHead className="table-col-header w-[15%] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,8 +85,34 @@ export default function DeploymentTable({ deployments, onEdit, onDeleted }: Prop
                     {formatDate(d.createdAt)}
                   </TableCell>
                 
-                  <TableCell className="text-right" onClick={ (e) => e.stopPropagation() }>
-                    <div className="flex items-center justify-end gap-1">
+                  <TableCell className="text-left" onClick={ (e) => e.stopPropagation() }>
+                    <div className="flex items-center justify-start gap-1 min-w-[140px] w-full">
+
+                      {/* Start Button (only when stopped or suspended) */}
+                      {d.status === DEPLOYMENT_STATUS.SUSPENDED && (
+                        <Button variant="ghost" disabled={isActionDisabled} onClick={() => alert("Start Pipeline WIP")} title="Start pipeline" 
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <MaterialIcon name="play_arrow" size={18} />
+                        </Button>
+                      )}
+
+                      {/* Stop Button (only when running) */}
+                      {d.status === DEPLOYMENT_STATUS.RUNNING && (
+                        <Button variant="ghost" disabled={isActionDisabled} onClick={() => alert("Stop Pipeline WIP")} title="Stop pipeline (creates savepoint)" 
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <MaterialIcon name="pause" size={18} />
+                        </Button>
+                      )}
+
+                      {/* Force Stop Button (only when running) */}
+                      {d.status === DEPLOYMENT_STATUS.RUNNING && (
+                        <Button variant="ghost" disabled={isActionDisabled} onClick={() => alert("Force Stop Pipeline WIP")} title="Force stop pipeline (skips savepoint)"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <MaterialIcon name="stop" size={18} />
+                        </Button>
+                      )}
+
+                      <div className="flex-1" />
 
                       {/* Edit */}
                       <button disabled={isActionDisabled} onClick={() => onEdit?.(d)} title="Edit deployment" 

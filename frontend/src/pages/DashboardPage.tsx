@@ -109,7 +109,7 @@ export default function DashboardPage() {
       {/* Toolbar: Tabs */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200 w-full md:w-auto overflow-x-auto">
-          {(['all', 'creating', 'running', 'failed', 'deleting', 'deleted'] as const).map((t) => {
+          {(['all', 'creating', 'running', 'suspended','failed', 'deleting', 'deleted'] as const).map((t) => {
             const count = t === 'all' 
               ? deployments.length 
               : deployments.filter(d => d.status === t).length;
