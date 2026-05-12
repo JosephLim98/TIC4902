@@ -15,6 +15,7 @@ export interface AuthContextType {
     logout: () => void;
     error: string | null;
     clearError: () => void;
+    updateUser: (fields: Partial<Pick<User, 'username' | 'email'>>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

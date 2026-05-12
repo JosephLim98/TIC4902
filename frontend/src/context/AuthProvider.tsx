@@ -152,6 +152,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null);
     };
 
+    const updateUser = (fields: Partial<Pick<User, 'username', 'email'>>) => {
+        setUser(prev => {
+            if (!prev) return prev
+            const updated = { ...prev, ...fields }
+            const storage = localStorage.getItem('user') ? localStorage : sessionStorage
+            storage.setItem('user', JSON.stringify({ username: updated.username, email: updated.email }))
+            return updated
+        })
+    }
+
     const value: AuthContextType = {
         user,
         isAuthenticated: !!user,
@@ -161,6 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         error,
         clearError,
+        updateUser,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
