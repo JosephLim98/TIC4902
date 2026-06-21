@@ -43,3 +43,10 @@ export async function getJarById(jarId) {
   plain.url = buildJarUrl(plain.objectName);
   return plain;
 }
+
+export async function deleteJar(jarId) {
+  const jar = await Jar.findByPk(jarId);
+  if (!jar) throw new NotFoundError(`Jar with id '${jarId}' not found`, jarId);
+  await minioDelete(jar.objectName).catch(() => {});
+  await jar.destroy();
+}

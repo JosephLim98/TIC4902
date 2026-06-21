@@ -38,3 +38,12 @@ export async function listJars(req, res, next) {
     next(err);
   }
 }
+
+export async function deleteJar(req, res, next) {
+  try {
+    await jarService.deleteJar(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}

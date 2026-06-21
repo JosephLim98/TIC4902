@@ -36,3 +36,7 @@ export async function uploadJar(
   });
   return data;
 }
+
+export async function deleteJar(id: number): Promise<void> {
+  await client.delete(`/jars/${id}`);
+}

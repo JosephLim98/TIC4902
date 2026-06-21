@@ -7,6 +7,7 @@ import { MaterialIcon } from './MaterialIcon'
 
 const navItems = [
   { to: '/', label: 'Pipelines' },
+  { to: '/jars', label: 'Jars' },
 ]
 
 export default function Sidebar() {
