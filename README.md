@@ -122,7 +122,7 @@ curl http://localhost:3000/api/flink/deployments/my-flink-job
 
 ### API - Create Flink Deployment
 
-**Simplest request
+**Simplest request**
 ```bash
 curl -X POST http://localhost:3000/api/flink/deployments \
   -H "Content-Type: application/json" \
@@ -172,13 +172,62 @@ curl -X POST http://localhost:3000/api/flink/deployments \
 | config.taskManager.replicas | No | Number of TaskManagers (1-100) |
 | config.taskManager.taskSlots | No | Slots per TaskManager (1-32) |
 
-## Database and Kafka
+## API - JAR Management
+
+### List all JARs
+```bash
+curl http://localhost:3000/api/jars
+```
+
+**Response:**
+```json
+{
+  "jars": [
+    {
+      "id": 7,
+      "name": "WordCount.jar",
+      "objectName": "5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar",
+      "sizeBytes": "14661",
+      "uploadedBy": null,
+      "createdAt": "2026-06-21T07:50:08.411Z",
+      "url": "http://host.minikube.internal:9000/flink-jars/5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar"
+    }
+  ],
+  "total": 1
+}
+```
+
+### Upload a JAR
+```bash
+curl -X POST http://localhost:3000/api/jars \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@WordCount.jar;type=application/java-archive"
+```
+
+**Response:**
+```json
+{
+  "id": 7,
+  "name": "WordCount.jar",
+  "objectName": "5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar",
+  "sizeBytes": "14661",
+  "uploadedBy": null,
+  "createdAt": "2026-06-21T07:50:08.411Z",
+  "url": "http://host.minikube.internal:9000/flink-jars/5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar"
+}
+```
+
+**Constraints:** `.jar` extension required, max 500 MB. The file is stored in MinIO and the returned `url` is what Flink pods use to fetch the JAR at job start time.
+
+## Database, Kafka, and MinIO
 Ensure your are at root level of project to run docker compose
 ```bash
 docker compose up -d  
 ```
 
 Access Kafka UI at `http://localhost:8080`
+
+Access MinIO Console at `http://localhost:9001` (username: `minioadmin`, password: `minioadmin`) use this to browse buckets, view uploaded JAR files, and manage object storage.
 
 ## Kubernetes Deployment
 
@@ -238,6 +287,30 @@ minikube service flink-jobmanager-rest --url
 ```
 
 Access the Flink UI at `http://localhost:8081`
+
+### Access Flink UI for a Specific Deployment
+
+Each FlinkDeployment created through the management UI gets its own Kubernetes service named `<deployment-name>-rest`. To open the Flink dashboard for a specific deployment:
+
+1. List your deployments and their services:
+```bash
+kubectl get flinkdeployments
+kubectl get service
+```
+
+2. Port-forward the target deployment's REST service:
+```bash
+kubectl port-forward svc/<deployment-name>-rest 8081:8081
+```
+
+For example, to access the dashboard for a deployment named `test-myjar`:
+```bash
+kubectl port-forward svc/test-myjar-rest 8081:8081
+```
+
+3. Open **[http://localhost:8081](http://localhost:8081)** in your browser.
+
+> If you have multiple deployments and want to access them simultaneously, forward each to a different local port (e.g. `8082:8081`, `8083:8081`).
 
 5. Submit SQL Job:
 ```bash

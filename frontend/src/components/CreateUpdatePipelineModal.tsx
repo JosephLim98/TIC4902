@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createDeployment, type CreateDeploymentPayload, updateDeployment, type UpdateDeploymentPayload } from '@/api/flink'
+import { listJars, uploadJar, type Jar } from '@/api/jar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MaterialIcon } from './MaterialIcon'
@@ -17,7 +18,6 @@ interface FormState {
   deploymentName: string
   namespace: string
   mode: 'session' | 'application'
-  jarName: string
   flinkVersion: string
   image: string
   jobParallelism: string
@@ -34,7 +34,6 @@ const INITIAL: FormState = {
   deploymentName: '',
   namespace: '',
   mode: 'session',
-  jarName: '',
   flinkVersion: '',
   image: '',
   jobParallelism: '',
@@ -55,7 +54,11 @@ const ALL_TOUCHED = Object.keys(INITIAL).reduce<Record<string, boolean>>(
 const DNS_RE = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/
 const MEMORY_RE = /^[1-9][0-9]*(m|g|M|G)$/
 
-function validateForm(f: FormState): Record<string, string> {
+function validateForm(
+  f: FormState,
+  jarId?: number | null,
+  jarFile?: File | null,
+): Record<string, string> {
   const errs: Record<string, string> = {}
 
   if (!f.deploymentName.trim()) {
@@ -68,10 +71,8 @@ function validateForm(f: FormState): Record<string, string> {
     errs.namespace = 'Lowercase alphanumeric + hyphens, no leading/trailing hyphen'
   }
 
-  if (f.mode === 'application' && !f.jarName.trim()) {
-    errs.jarName = 'Jar name is required for application mode'
-  } else if (f.jarName && !DNS_RE.test(f.jarName)) {
-    errs.jarName = 'Lowercase alphanumeric + hyphens, no leading/trailing hyphen'
+  if (f.mode === 'application' && !jarId && !jarFile) {
+    errs.jar = 'Select or upload a JAR for application mode'
   }
 
   if (f.jmMemory && !MEMORY_RE.test(f.jmMemory)) errs.jmMemory = 'e.g. 1600m or 2g'
@@ -94,11 +95,11 @@ function validateForm(f: FormState): Record<string, string> {
   return errs
 }
 
-function buildPayload(f: FormState): CreateDeploymentPayload {
+function buildPayload(f: FormState, resolvedJarId?: number | null): CreateDeploymentPayload {
   const p: CreateDeploymentPayload = { deploymentName: f.deploymentName }
 
   if (f.namespace) p.namespace = f.namespace
-  if (f.mode === 'application' && f.jarName) p.jarName = f.jarName
+  if (f.mode === 'application' && resolvedJarId) p.jarId = resolvedJarId
   if (f.jobParallelism) p.jobParallelism = Number(f.jobParallelism)
 
   const cfg: NonNullable<CreateDeploymentPayload['config']> = {}
@@ -132,6 +133,15 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
   const [serverError, setServerError] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
+  // JAR picker state
+  const [jars, setJars] = useState<Jar[]>([])
+  const [jarsLoading, setJarsLoading] = useState(false)
+  const [jarTab, setJarTab] = useState<'select' | 'upload'>('select')
+  const [selectedJarId, setSelectedJarId] = useState<number | null>(null)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -140,7 +150,6 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
           deploymentName: initialData.deploymentName || '',
           namespace: initialData.namespace || '',
           mode: initialData.deploymentMode as FlinkMode,
-          jarName: initialData.jarName || '',
           flinkVersion: initialData.config?.flinkVersion || '',
           image: initialData.config?.image || '',
           jobParallelism: String(initialData.jobParallelism || ''),
@@ -154,6 +163,15 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
         })
       } else {
         setForm(INITIAL)
+        setSelectedJarId(null)
+        setUploadFile(null)
+        setJarTab('select')
+        setUploadProgress(null)
+        setJarsLoading(true)
+        listJars()
+          .then(({ jars: fetched }) => setJars(fetched))
+          .catch(() => setJars([]))
+          .finally(() => setJarsLoading(false))
       }
       setErrors({})
       setTouched({})
@@ -190,7 +208,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setTouched(ALL_TOUCHED)
-    const errs = validateForm(form)
+    const errs = validateForm(form, selectedJarId, uploadFile)
     setErrors(errs)
     if (Object.values(errs).some(Boolean)) return
 
@@ -199,10 +217,9 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
 
     try {
       if (initialData) {
-        // Edit mode 
-        // Immutable fields such as namespace, flinkVersion, serviceAccount, deploymentName, deploymentMode and jarName are excluded from the payload
+        // Edit mode — immutable fields (namespace, flinkVersion, serviceAccount, deploymentName, deploymentMode, jar) excluded
         const cfg: UpdateDeploymentPayload['config'] = {}
-        
+
         if (form.image) { cfg.image = form.image }
 
         const jm: NonNullable<typeof cfg.jobManager> = {}
@@ -224,17 +241,24 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
         console.log('Updating deployment with payload: ', payload)
         await updateDeployment(initialData.deploymentName, payload)
       } else {
-        await createDeployment(buildPayload(form))
+        let finalJarId = selectedJarId
+        if (form.mode === 'application' && uploadFile) {
+          setUploadProgress(0)
+          try {
+            const uploaded = await uploadJar(uploadFile, setUploadProgress)
+            finalJarId = uploaded.id
+          } finally {
+            setUploadProgress(null)
+          }
+        }
+        await createDeployment(buildPayload(form, finalJarId))
       }
       onCreated()
       onClose()
     } catch (err: any) {
       const message = err.response?.data?.error || err.response?.data?.message || err.message || "An unexpected error occurred";
-        // (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        // `Failed to ${initialData ? 'update' : 'create'} pipeline. Check the values and try again.`
       setServerError(message);
-        // setServerError(typeof message === 'object' ? JSON.stringify(message) : message);
-    } finally { 
+    } finally {
       setSubmitting(false)
     }
   }
@@ -268,8 +292,6 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                 : 'Deploy a new Apache Flink job to Kubernetes'
               }
             </p>
-            {/* <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">Create Pipeline</h2>
-            <p className="mt-0.5 text-xs text-zinc-400">Deploy a new Apache Flink job to Kubernetes</p> */}
           </div>
           <button
             type="button"
@@ -339,35 +361,104 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                   ))}
                 </div>
 
-                {initialData ? (
+                {initialData && (
                   <p className="mt-1.5 text-[11px] text-zinc-400">
                     Deployment mode cannot be changed after creation.
-                  </p>
-                ) : (
-                  <p>
-                    {/* {form.mode === 'session'
-                      ? 'Shared cluster for multiple jobs, no jar required.'
-                      : 'Dedicated cluster per job, jar name required.'} */}
                   </p>
                 )}
                 
               </Field>
 
-              {form.mode === 'application' && (
-                <Field label="Jar Name">
-                  <Input
-                    aria-invalid={!!errors.jarName}
-                    placeholder="my-flink-job-1-0"
-                    value={form.jarName}
-                    onChange={e => set('jarName', e.target.value)}
-                    onBlur={() => blur('jarName')}
-                    spellCheck={false}
-                    disabled={!!initialData}
-                    className={initialData ? 'opacity-60 cursor-not-allowed' : ''}
-                  />
-                  {initialData && (
-                    <p className="text-[11px] text-zinc-400 mt-0.5">Jar name cannot be changed after creation.</p>
+              {form.mode === 'application' && !initialData && (
+                <Field label="JAR File" error={errors.jar}>
+                  <div className="flex gap-2 mb-2">
+                    {(['select', 'upload'] as const).map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setJarTab(t)}
+                        className={`px-3 py-1 text-xs rounded transition-colors ${
+                          jarTab === t ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                        }`}
+                      >
+                        {t === 'select' ? 'Select Existing' : 'Upload New'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {jarTab === 'select' ? (
+                    jarsLoading ? (
+                      <p className="text-xs text-zinc-400">Loading JARs...</p>
+                    ) : jars.length === 0 ? (
+                      <p className="text-xs text-zinc-400">No JARs uploaded yet. Switch to Upload New.</p>
+                    ) : (
+                      <select
+                        className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                        value={selectedJarId ?? ''}
+                        onChange={e => {
+                          const id = e.target.value ? Number(e.target.value) : null
+                          setSelectedJarId(id)
+                          setUploadFile(null)
+                          if (errors.jar) setErrors(prev => ({ ...prev, jar: '' }))
+                        }}
+                      >
+                        <option value="">-- Select a JAR --</option>
+                        {jars.map(j => (
+                          <option key={j.id} value={j.id}>
+                            {j.name} ({(j.sizeBytes / 1024 / 1024).toFixed(1)} MB)
+                          </option>
+                        ))}
+                      </select>
+                    )
+                  ) : (
+                    <div>
+                      <input
+                        type="file"
+                        accept=".jar"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0] ?? null
+                          setUploadFile(file)
+                          setSelectedJarId(null)
+                          if (errors.jar) setErrors(prev => ({ ...prev, jar: '' }))
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploadFile ? uploadFile.name : 'Choose .jar file'}
+                      </Button>
+                      {uploadProgress !== null && (
+                        <div className="mt-2 h-1.5 w-full bg-zinc-100 rounded overflow-hidden">
+                          <div
+                            className="h-full bg-zinc-900 rounded transition-all duration-150"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
+
+                  {selectedJarId && (
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      Selected: {jars.find(j => j.id === selectedJarId)?.name}
+                    </p>
+                  )}
+                </Field>
+              )}
+
+              {form.mode === 'application' && initialData && (
+                <Field label="JAR File">
+                  <Input
+                    value={initialData.jar?.name ?? 'N/A'}
+                    disabled
+                    className="opacity-60 cursor-not-allowed"
+                  />
+                  <p className="text-[11px] text-zinc-400 mt-0.5">JAR cannot be changed after creation.</p>
                 </Field>
               )}
 
@@ -466,22 +557,12 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
               )}
             </section>
             
-            {serverError && (<div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
-              <MaterialIcon name="error" size={14} className="mt-0.5 shrink-0" />
-              <span>{serverError}</span>
-              </div>
-            )}
-            
-            {/* {serverError && <div className="error-banner">{serverError}</div>} */}
-
-            {/* {serverError && (
-              <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
-                <MaterialIcon name="error" className="size-4 mt-0.5" />
+            {serverError && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs flex items-start gap-2">
+                <MaterialIcon name="error" size={14} className="mt-0.5 shrink-0" />
                 <span>{serverError}</span>
               </div>
-            )} */}
-            
-            {/* {apiError && <div className="error-banner">{apiError}</div>} */}
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-2.5 border-t border-zinc-100 px-6 py-4">
@@ -490,11 +571,10 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
             </Button>
             <Button type="submit" size="sm" disabled={submitting} className="gap-2">
               {submitting && <span className="size-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
-              {submitting 
-                ? (initialData ? 'Updating...' : 'Creating...') 
+              {submitting
+                ? (initialData ? 'Updating...' : 'Creating...')
                 : (initialData ? 'Save Changes' : 'Create Pipeline')
               }
-              {/* {submitting ? 'Creating...' : 'Create Pipeline'} */}
             </Button>
           </div>
         </form>

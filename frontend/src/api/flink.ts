@@ -16,7 +16,6 @@ export async function getDeployment(name: string, signal?: AbortSignal): Promise
 export interface CreateDeploymentPayload {
   deploymentName: string;
   namespace?: string;
-  jarName?: string;
   jarId?: number;
   jobParallelism?: number;
   environmentVariables?: Record<string, string>;
@@ -31,7 +30,7 @@ export interface CreateDeploymentPayload {
 }
 
 // Fields such as namespace, flinkVersion, serviceAccount are intentionally excluded from updates. They are immutable post-create
-// Changing the deploymentName, deploymentMode, jarName, or jarId would require a new deployment
+// Changing the deploymentName, deploymentMode, or jarId would require a new deployment
 export interface UpdateDeploymentPayload {
   jobParallelism?: number;
   environmentVariables?: Record<string, string>;

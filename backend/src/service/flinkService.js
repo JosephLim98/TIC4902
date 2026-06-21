@@ -6,6 +6,7 @@ import { FLINK_LIFECYCLE_TO_STATUS } from '../utils/constants.js';
 import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
 import * as k8sService from './kubernetesService.js';
 import { ConflictError, KubernetesError, NotFoundError, ValidationError } from '../utils/errors.js';
+import { getJarById } from './jarService.js';
 
 
 async function getFlinkConfig() {
@@ -54,14 +55,13 @@ export async function createDeployment(deploymentData){
     const fullConfig = await applyConfigDefaults(deploymentData);
     const {
         deploymentName,
-        jarName,      
-        jarId,       
+        jarId,
         programArgs,
         environmentVariables,
         jobParallelism
       } = deploymentData;
 
-      const deploymentMode = (jarName || jarId) ? 'application' : 'session';
+      const deploymentMode = jarId ? 'application' : 'session';
 
       validateParallelism(jobParallelism, fullConfig.taskManager);
 
@@ -69,15 +69,21 @@ export async function createDeployment(deploymentData){
         deploymentName,
         namespace: fullConfig.namespace,
         deploymentMode,
-        jarName: jarName || undefined,
         jarId: jarId || undefined,
         config: fullConfig
       });
 
+      let resolvedJar = null;
+      if (deploymentMode === 'application') {
+        if (jarId) {
+          resolvedJar = await getJarById(jarId);
+        } else {
+          throw new ValidationError('Application mode requires jarId');
+        }
+      }
+
       // Used to ensure atomicity
       const transaction = await sequelize.transaction();
-
-      //TODO: Add Jar logic manipulation here
 
       try {
         const existingDeployment = await Deployment.findOne({
@@ -102,9 +108,13 @@ export async function createDeployment(deploymentData){
     
           logger.info('Created database record', {id: deployment.id, deploymentName, deploymentMode});
     
+          const jarSpec = resolvedJar
+            ? { jarUrl: resolvedJar.url, parallelism: jobParallelism || null }
+            : null;
+
           let crdMetadata;
           try {
-            crdMetadata = await k8sService.createFlinkCluster(deploymentName, fullConfig.namespace, fullConfig, null, environmentVariables);
+            crdMetadata = await k8sService.createFlinkCluster(deploymentName, fullConfig.namespace, fullConfig, jarSpec, environmentVariables);
             logger.info('Created FlinkDeployment CRD', {deploymentName, deploymentMode, uid: crdMetadata.uid});
           } catch (k8sError) {
             logger.error('FlinkDeployment CRD creation failed', {deploymentName, error: k8sError.message});
@@ -119,7 +129,9 @@ export async function createDeployment(deploymentData){
           await deployment.reload();
     
           const result = deployment.toJSON();
-          //TODO: Add jar details when applicable to result
+          if (resolvedJar?.id) {
+            result.jar = { id: resolvedJar.id, name: resolvedJar.name, url: resolvedJar.url };
+          }
           return result;
       } catch (error) {
         if (!transaction.finished) {

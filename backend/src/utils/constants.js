@@ -9,6 +9,7 @@ export const FLINK_CRD = {
     APP: 'flink',
     FLINK_API: 'flink-api',
     SAVEPOINT_UPGRADE: 'savepoint',
+    STATELESS_UPGRADE: 'stateless',
     FLINK_CONTAINER_NAME: 'flink-main-container'
   };
 

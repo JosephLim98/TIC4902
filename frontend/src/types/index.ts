@@ -1,4 +1,7 @@
 import type { DeploymentStatus } from '../../../utils/constants.js';
+import type { Jar } from '../api/jar';
+
+export type JarSummary = Pick<Jar, 'id' | 'name' | 'url'>
 
 export interface JobManagerConfig {
   memory: string;
@@ -34,7 +37,6 @@ export interface Deployment {
   config: DeploymentConfig;
   createdAt: string;
   environmentVariables?: Record<string, string>;
-  jarName?: string;
   jobParallelism?: number;
   kubernetesStatus?: Record<string, unknown>;
   flinkDeployment?: {
@@ -43,6 +45,7 @@ export interface Deployment {
     apiVersion: string;
   };
   errorMessage?: string;
+  jar?: JarSummary;
 }
 
 export interface ListDeploymentsResponse {

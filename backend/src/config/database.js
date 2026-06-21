@@ -38,9 +38,9 @@ const sequelize = new Sequelize({
 
   export async function initializeDatabase() {
     try {
-      const { FlinkConfig } = await import('../models/index.js');
-      // Sync all models
-      await sequelize.sync({ alter: false });
+      const { FlinkConfig } = await import('../models/index.js');      
+      // Sync all models, only used for prototyping
+      await sequelize.sync({ alter: true });
       logger.info('Database schema synchronized');
       
       await seedFlinkConfig(FlinkConfig);

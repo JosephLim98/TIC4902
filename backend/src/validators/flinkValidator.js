@@ -10,7 +10,6 @@ export const createDeploymentSchema = Joi.object({
       .required(),
   
     namespace: Joi.string().pattern(REGEX.DNS_PATTERN).message(`namespace ${ERROR_MESSAGES.DNS_ERROR}`).optional(),
-    jarName: Joi.string().pattern(REGEX.DNS_PATTERN).message(`jarName ${ERROR_MESSAGES.DNS_ERROR}`).optional(),
     jarId: Joi.number().integer().positive().optional(),
     environmentVariables: Joi.object().optional(),
     jobParallelism: Joi.number().integer().min(1).max(1024).optional(),
@@ -40,7 +39,7 @@ export const updateDeploymentSchema = Joi.object({
   // flinkVersion has been intentionally excluded from updates because it requires full pod teardown / recreate; delete + create should be used instead
   // serviceAccount has been intentionally excluded from updates due to security-sensitive identity binding. It should be immutable after creating
   // deploymentName has been intentionally excluded from updates because it is the PK in the database. CHanging it would orphan the K8s object
-  // Fields such as deploymentMode, jarName, jarId, and programArgs all define the job type. Changing it requires a new deployment
+  // Fields such as deploymentMode, jarId, and programArgs all define the job type. Changing it requires a new deployment
   environmentVariables: Joi.object().optional(),
   jobParallelism: Joi.number().integer().min(1).max(1024).optional(),
   config: Joi.object({

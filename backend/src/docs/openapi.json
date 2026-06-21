@@ -3,7 +3,7 @@
   "info": {
     "title": "TIC4902 Backend API",
     "version": "1.0.0",
-    "description": "REST API for Flink deployment management and authentication. DNS-style names (`deploymentName`, `namespace`, `jarName`) must be lowercase alphanumeric with optional internal hyphens (1–63 chars). Memory fields use a number plus unit, e.g. `1024m`, `2g`."
+    "description": "REST API for Flink deployment management and authentication. DNS-style names (`deploymentName`, `namespace`) must be lowercase alphanumeric with optional internal hyphens (1–63 chars). Memory fields use a number plus unit, e.g. `1024m`, `2g`."
   },
   "servers": [
     {
@@ -23,6 +23,10 @@
     {
       "name": "Flink",
       "description": "Flink deployment CRUD (requires working Kubernetes / Flink operator for mutating operations)"
+    },
+    {
+      "name": "JAR",
+      "description": "JAR file upload and listing (stored in MinIO)"
     }
   ],
   "paths": {
@@ -169,6 +173,89 @@
         }
       }
     },
+    "/api/jars": {
+      "get": {
+        "tags": ["JAR"],
+        "summary": "List all uploaded JAR files",
+        "operationId": "listJars",
+        "responses": {
+          "200": {
+            "description": "List of JAR files",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JarListResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["JAR"],
+        "summary": "Upload a JAR file",
+        "description": "Accepts a `.jar` file up to 500 MB via multipart form upload. The file is stored in MinIO and a record is created in the database.",
+        "operationId": "uploadJar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "JAR file to upload (.jar extension required, max 500 MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "JAR uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Jar" }
+              }
+            }
+          },
+          "400": {
+            "description": "No file provided or file is not a .jar",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          },
+          "413": {
+            "description": "File exceeds the 500 MB limit",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal or storage error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/flink/deployments": {
       "get": {
         "tags": [
@@ -204,7 +291,7 @@
           "Flink"
         ],
         "summary": "Create deployment",
-        "description": "Session mode by default; if `jarName` or `jarId` is set, application mode is used. `namespace`, `jarName`: DNS label pattern, 1–63 chars. `jobParallelism`: 1–1024. `config.jobManager.replicas` must be 1 if set.",
+        "description": "Session mode by default; if `jarId` is set, application mode is used. `namespace`: DNS label pattern, 1–63 chars. `jobParallelism`: 1–1024. `config.jobManager.replicas` must be 1 if set.",
         "operationId": "createDeployment",
         "requestBody": {
           "required": true,
@@ -309,7 +396,7 @@
           "Flink"
         ],
         "summary": "Update deployment",
-        "description": "At least one field required. Immutable after create: `namespace`, `deploymentName`, Flink version, `serviceAccount`, job type fields (`jarName`, `jarId`, etc.) — use delete + create instead.",
+        "description": "At least one field required. Immutable after create: `namespace`, `deploymentName`, Flink version, `serviceAccount`, `jarId` — use delete + create instead.",
         "operationId": "updateDeployment",
         "requestBody": {
           "required": true,
@@ -683,9 +770,6 @@
           "namespace": {
             "$ref": "#/components/schemas/DnsLabel"
           },
-          "jarName": {
-            "$ref": "#/components/schemas/DnsLabel"
-          },
           "jarId": {
             "type": "integer",
             "minimum": 1
@@ -782,6 +866,29 @@
             "additionalProperties": true,
             "description": "Present on some create responses when JAR metadata is returned"
           }
+        }
+      },
+      "Jar": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "description": "Original filename" },
+          "objectName": { "type": "string", "description": "UUID-prefixed name used as the MinIO object key" },
+          "sizeBytes": { "type": "integer", "format": "int64", "description": "File size in bytes" },
+          "uploadedBy": { "type": "integer", "nullable": true, "description": "ID of the user who uploaded the JAR" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "url": { "type": "string", "description": "Direct or presigned URL to download the JAR from MinIO" }
+        }
+      },
+      "JarListResponse": {
+        "type": "object",
+        "required": ["jars", "total"],
+        "properties": {
+          "jars": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Jar" }
+          },
+          "total": { "type": "integer" }
         }
       },
       "DeploymentListResponse": {

@@ -1,8 +1,8 @@
 import Deployment from './deploymentModel.js';
 import { FlinkConfig } from './flinkConfigModel.js';
+import Jar from './jarModel.js';
 
-//TODO: Add relationships
+Jar.hasMany(Deployment, { foreignKey: 'jarId', as: 'deployments' });
+Deployment.belongsTo(Jar, { foreignKey: 'jarId', as: 'jar' });
 
-
-//Add more models to be exported
-export { Deployment, FlinkConfig };
+export { Deployment, FlinkConfig, Jar };
