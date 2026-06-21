@@ -18,5 +18,6 @@ const upload = multer({
 
 router.post('/', upload.single('file'), jarController.uploadJar);
 router.get('/', jarController.listJars);
+router.delete('/:id', jarController.deleteJar);
 
 export default router;

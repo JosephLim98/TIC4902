@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import Sidebar from '@/components/Sidebar'
 import DashboardPage from '@/pages/DashboardPage'
 import DeploymentDetailPage from '@/pages/DeploymentDetailPage'
+import JarsPage from '@/pages/JarsPage'
 
 import { AuthProvider } from './context/AuthProvider'
 import RegisterPage from './pages/RegisterPage'
@@ -43,6 +44,7 @@ export default function App() {
             {/* These children will render inside the <main> or <Outlet /> of Layout */}
             <Route index element={<DashboardPage />} />
             <Route path="/deployments/:name" element={<DeploymentDetailPage />} />
+            <Route path="/jars" element={<JarsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
