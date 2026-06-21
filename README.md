@@ -57,6 +57,12 @@ Head to backend folder
 ```
 cd backend
 ```
+Copy the example environment file and fill in your values:
+```bash
+cp .env.example .env
+```
+> Edit `.env` with your database credentials, JWT secret, and MinIO settings before starting the server.
+
 Install dependencies
 ```
 nvm use
