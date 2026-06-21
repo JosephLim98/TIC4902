@@ -48,7 +48,7 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
     crd.spec.job = {
         jarURI: jarSpec.jarUrl,
         state: DEPLOYMENT_STATUS.RUNNING,
-        upgradeMode: FLINK_CRD.SAVEPOINT_UPGRADE,
+        upgradeMode: FLINK_CRD.STATELESS_UPGRADE,
         ...(jarSpec.parallelism && { parallelism: jarSpec.parallelism }),
         ...(jarSpec.mainClass && { entryClass: jarSpec.mainClass })
         };

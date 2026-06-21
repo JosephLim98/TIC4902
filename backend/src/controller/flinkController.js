@@ -25,13 +25,10 @@ function formatDeploymentResponse(deployment) {
 export async function createDeployment(req, res, next) {
     try {
         const flinkDto =  req.body;
-        const isApplicationMode = flinkDto.jarName || flinkDto.jarId;
-        
         logger.info('Received deployment creation request', {
             deploymentName: flinkDto.deploymentName,
             namespace: flinkDto.namespace,
-            mode: isApplicationMode ? 'application' : 'session',
-            jarName: flinkDto.jarName || undefined,
+            mode: flinkDto.jarId ? 'application' : 'session',
             jarId: flinkDto.jarId || undefined
           });
         

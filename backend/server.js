@@ -6,6 +6,7 @@ import initDatabase from "./src/db/init.js";
 import { mountSwagger } from "./src/docs/serveSwagger.js";
 import errorHandler from "./src/middleware/errorHandler.js";
 import routes from "./src/routes/index.js";
+import { ensureBucketExists } from "./src/service/minioService.js";
 
 dotenv.config();
 
@@ -30,8 +31,13 @@ app.use(errorHandler);
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initDatabase();
-    await initializeDatabase();
+    await Promise.all([
+      initDatabase(),
+      initializeDatabase(),
+      ensureBucketExists().catch(err =>
+        console.error("MinIO bucket setup failed, JAR upload will be unavailable:", err.message)
+      ),
+    ]);
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
