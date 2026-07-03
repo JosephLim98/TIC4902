@@ -18,5 +18,8 @@ router.put(
     validateRequest(updateDeploymentSchema), 
     flinkController.updateDeployment
 );
+router.post('/deployments/:deploymentName/resume', flinkController.resumeDeployment);
+router.post('/deployments/:deploymentName/stop', flinkController.stopDeployment);
+router.post('/deployments/:deploymentName/force-stop', flinkController.forceStopDeployment);
 
 export default router;

@@ -1,7 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
-import { FLINK_MODE } from '../../../utils/constants.ts';
-import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
+import { FLINK_MODE, DEPLOYMENT_STATUS } from '../utils/constants.js';
 
 const Deployment = sequelize.define('Deployment', {
     id: {
@@ -53,8 +52,8 @@ const Deployment = sequelize.define('Deployment', {
       jarId: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: 'jar_id'
-        //TODO: Add reference to jar here
+        field: 'jarId',
+        references: { model: 'flink_jars', key: 'id' }
       },
       environmentVariables: {
         type: DataTypes.JSONB,
@@ -68,6 +67,15 @@ const Deployment = sequelize.define('Deployment', {
         validate: {
           min: 1
         }
+      },
+      // Track an in-flight lifecycle action (stop/force-stop/resume/delete) independently of 'status'
+      // 'status' reflects the last known K8s state
+      // 'pendingAction' is what the user most recently asked for and is still waiting on
+      // this is what lets us block concurrent/conflicting actions (e.g. stop while deleting) reliably and what the frontend uses to show a spinner instead of a stale or flickering status
+      pendingAction: {
+        type: DataTypes.ENUM('stop', 'force_stop', 'resume', 'delete'),
+        allowNull: true,
+        field: 'pending_action'
       }
 }, {
     tableName: 'flink_deployments',

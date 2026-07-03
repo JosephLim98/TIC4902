@@ -6,7 +6,8 @@ import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal.js
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MaterialIcon } from '@/components/MaterialIcon'
-import { DEPLOYMENT_STATUS, type DeploymentStatus } from '../../../utils/constants.js';
+import { DEPLOYMENT_STATUS, type DeploymentStatus } from '@/utils/constants';
+import type { ApiError } from '@/api/client'
 
 type FilterType = DeploymentStatus | 'all'
 
@@ -28,10 +29,22 @@ export default function DashboardPage() {
       const { deployments } = await listDeployments(signal)
       setDeployments(deployments)
     } catch (err) {
-      if ((err as { name?: string })?.name !== 'CanceledError')
-        setError('Failed to load pipelines. Try again later...')
+      const apiErr = err as ApiError
+      if (apiErr.name !== 'CanceledError') {
+        setError(apiErr.message ?? 'Failed to load pipelines. Try again later...')
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Background refresh for poller. Doesn't toggle loading spinner, so table doesn't flicker every few seconds while polling
+  async function refreshDeploymentsSilent(signal?: AbortSignal) {
+    try {
+      const { deployments } = await listDeployments(signal)
+      setDeployments(deployments)
+    } catch {
+      // ignore transient polling failures. keep showing the last known state
     }
   }
 
@@ -40,6 +53,34 @@ export default function DashboardPage() {
     fetchDeployments(controller.signal)
     return () => controller.abort()
   }, [])
+
+  const TRANSITIONING_STATUSES: DeploymentStatus[] = [
+    DEPLOYMENT_STATUS.CREATING,
+    DEPLOYMENT_STATUS.ROLLING_BACK,
+    DEPLOYMENT_STATUS.DELETING,
+    DEPLOYMENT_STATUS.UNKNOWN,
+  ]
+
+  // Poll while any row is either still reconciling on the K8s side, or has a
+  // pendingAction the backend is still processing (stop/force_stop/resume/delete).
+  // pendingAction is the more reliable signal — it comes straight from the
+  // server and won't ever desync the way a purely status-based check could.
+  const hasTransitioningDeployment = deployments.some(
+    d => TRANSITIONING_STATUSES.includes(d.status) || !!d.pendingAction
+  )
+
+  useEffect(() => {
+    if (!hasTransitioningDeployment) return
+    const controller = new AbortController()
+    const interval = setInterval(() => {
+      refreshDeploymentsSilent(controller.signal)
+    }, 4000)
+
+    return () => {
+      clearInterval(interval)
+      controller.abort()
+    }
+  }, [hasTransitioningDeployment])
 
   const stats = useMemo(() => {
     return {
@@ -87,7 +128,8 @@ export default function DashboardPage() {
           <p className="mt-0.5 text-sm text-zinc-400">Apache Flink streaming deployments</p>
         </div>
         <Button variant="default" size="sm" onClick={() => setModalOpen(true)}>
-          + Create Pipeline
+          <MaterialIcon name="add" size={20} />
+          Create Pipeline
         </Button>
       </div>
 
@@ -180,7 +222,8 @@ export default function DashboardPage() {
           </p>
           {!search && filter === 'all' && (
             <Button variant="outline" size="sm" className="mt-4" onClick={() => setModalOpen(true)}>
-              + Create First Pipeline
+              <MaterialIcon name="add" size={20} />
+              Create First Pipeline
             </Button>
           )}
         </div>
@@ -191,7 +234,8 @@ export default function DashboardPage() {
               setEditDeployment(d);
               setModalOpen(true);
             }} 
-            onDeleted={() => fetchDeployments()} />
+            onDeleted={() => refreshDeploymentsSilent()} />
+            {/* onDeleted={() => fetchDeployments()} /> */}
           
           <div className="flex items-center justify-between px-2">
             <p className="text-sm text-zinc-500">

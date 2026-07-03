@@ -1,8 +1,10 @@
 import type { Deployment } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { deleteDeployment } from '@/api/flink'
 import { createPortal } from 'react-dom'
 import { MaterialIcon } from "./MaterialIcon";
+import { Button } from '@/components/ui/button';
+import type { ApiError } from '@/api/client';
 
 interface DeleteProps {
     deployment: Deployment | null;
@@ -14,6 +16,12 @@ export function DeleteDeploymentDialog({ deployment, onClose, onSuccess }: Delet
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
+    useEffect(() => {
+      if (deployment) {
+        setError(null);
+      }
+    }, [deployment]);
+
     async function handleDelete() {       
         if (!deployment) {
             return;
@@ -26,8 +34,8 @@ export function DeleteDeploymentDialog({ deployment, onClose, onSuccess }: Delet
             await deleteDeployment(deployment.deploymentName);
             onSuccess();
             onClose();
-        } catch {
-            setError("Failed to delete deployment. Please try again.");
+        } catch (err) {
+            setError((err as ApiError).message ?? "Failed to delete deployment. Please try again.");
         } finally {
             setIsDeleting(false);
         }
@@ -60,19 +68,17 @@ export function DeleteDeploymentDialog({ deployment, onClose, onSuccess }: Delet
             )}
 
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={onClose}
-              disabled={isDeleting}
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isDeleting}>
                 Cancel
-              </button>
+              </Button>
 
-              <button onClick={handleDelete} disabled={isDeleting} 
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60">
+              <Button size="sm" onClick={handleDelete} disabled={isDeleting} 
+                className="bg-red-600 hover:bg-red-700 text-white">
                 {isDeleting && (
-                  <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white mr-2" />
                 )}
                 {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>,

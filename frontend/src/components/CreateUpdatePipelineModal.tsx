@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MaterialIcon } from './MaterialIcon'
 import type { Deployment } from '@/types'
-import type { FlinkMode } from '../../../utils/constants'
+import { FLINK_MODE, type FlinkMode } from '@/utils/constants'
+import type { ApiError } from '@/api/client'
+import { formatBytes } from '@/lib/utils'
 
 interface Props {
   isOpen: boolean
@@ -17,7 +19,7 @@ interface Props {
 interface FormState {
   deploymentName: string
   namespace: string
-  mode: 'session' | 'application'
+  mode: FlinkMode
   flinkVersion: string
   image: string
   jobParallelism: string
@@ -33,7 +35,7 @@ interface FormState {
 const INITIAL: FormState = {
   deploymentName: '',
   namespace: '',
-  mode: 'session',
+  mode: FLINK_MODE.SESSION,
   flinkVersion: '',
   image: '',
   jobParallelism: '',
@@ -71,7 +73,7 @@ function validateForm(
     errs.namespace = 'Lowercase alphanumeric + hyphens, no leading/trailing hyphen'
   }
 
-  if (f.mode === 'application' && !jarId && !jarFile) {
+  if (f.mode === FLINK_MODE.APPLICATION && !jarId && !jarFile) {
     errs.jar = 'Select or upload a JAR for application mode'
   }
 
@@ -99,7 +101,7 @@ function buildPayload(f: FormState, resolvedJarId?: number | null): CreateDeploy
   const p: CreateDeploymentPayload = { deploymentName: f.deploymentName }
 
   if (f.namespace) p.namespace = f.namespace
-  if (f.mode === 'application' && resolvedJarId) p.jarId = resolvedJarId
+  if (f.mode === FLINK_MODE.APPLICATION && resolvedJarId) p.jarId = resolvedJarId
   if (f.jobParallelism) p.jobParallelism = Number(f.jobParallelism)
 
   const cfg: NonNullable<CreateDeploymentPayload['config']> = {}
@@ -227,7 +229,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
         if (form.jmCpu) { jm.cpu = Number(form.jmCpu) }
         if (Object.keys(jm).length) { cfg.jobManager = jm }
 
-        const tm: NonNullable<typeof cfg.jobManager> = {}
+        const tm: NonNullable<typeof cfg.taskManager> = {}
         if (form.tmMemory) { tm.memory = form.tmMemory; }
         if (form.tmCpu) { tm.cpu = Number(form.tmCpu); }
         if (form.tmReplicas) { tm.replicas = Number(form.tmReplicas) }
@@ -242,7 +244,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
         await updateDeployment(initialData.deploymentName, payload)
       } else {
         let finalJarId = selectedJarId
-        if (form.mode === 'application' && uploadFile) {
+        if (form.mode === FLINK_MODE.APPLICATION && uploadFile) {
           setUploadProgress(0)
           try {
             const uploaded = await uploadJar(uploadFile, setUploadProgress)
@@ -255,9 +257,20 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
       }
       onCreated()
       onClose()
-    } catch (err: any) {
-      const message = err.response?.data?.error || err.response?.data?.message || err.message || "An unexpected error occurred";
-      setServerError(message);
+    } catch (err) {
+      const apiErr = err as ApiError
+
+      setServerError(apiErr.message ?? 'An unexpected error occurred');
+
+      // If server sent per-field details, make them inline on relevant fields
+      if (Array.isArray(apiErr.details) && apiErr.details.length > 0) {
+        const serverFieldErrors: Record<string, string> = {};
+        apiErr.details.forEach(({ field, message }: { field: string; message: string }) => {
+          serverFieldErrors[field] = message;
+        });
+        setErrors(prev => ({ ...prev, ...serverFieldErrors }));
+        setTouched(ALL_TOUCHED);   // make sure errors are visible
+      }
     } finally {
       setSubmitting(false)
     }
@@ -344,7 +357,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
 
               <Field label="Mode">
                 <div className="flex rounded-md border border-zinc-200 overflow-hidden w-fit">
-                  {(['session', 'application'] as const).map(m => (
+                  {([FLINK_MODE.SESSION, FLINK_MODE.APPLICATION] as const).map(m => (
                     <button
                       key={m}
                       type="button"
@@ -369,14 +382,18 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                 
               </Field>
 
-              {form.mode === 'application' && !initialData && (
+              {form.mode === FLINK_MODE.APPLICATION && !initialData && (
                 <Field label="JAR File" error={errors.jar}>
                   <div className="flex gap-2 mb-2">
                     {(['select', 'upload'] as const).map(t => (
                       <button
                         key={t}
                         type="button"
-                        onClick={() => setJarTab(t)}
+                        onClick={() => {
+                          setJarTab(t)
+                          setUploadFile(null)
+                          setErrors(prev => ({ ...prev, jar: '' }))
+                        }}
                         className={`px-3 py-1 text-xs rounded transition-colors ${
                           jarTab === t ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
                         }`}
@@ -405,7 +422,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                         <option value="">-- Select a JAR --</option>
                         {jars.map(j => (
                           <option key={j.id} value={j.id}>
-                            {j.name} ({(j.sizeBytes / 1024 / 1024).toFixed(1)} MB)
+                            {j.name} ({formatBytes(Number(j.sizeBytes))})
                           </option>
                         ))}
                       </select>
@@ -419,6 +436,16 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                         className="hidden"
                         onChange={e => {
                           const file = e.target.files?.[0] ?? null
+
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ''
+                          }
+
+                          if (file && !file.name.toLowerCase().endsWith('.jar')) {
+                            setErrors(prev => ({ ...prev, jar: 'Only .jar files are accepted' }))
+                            return
+                          }
+
                           setUploadFile(file)
                           setSelectedJarId(null)
                           if (errors.jar) setErrors(prev => ({ ...prev, jar: '' }))
@@ -451,7 +478,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                 </Field>
               )}
 
-              {form.mode === 'application' && initialData && (
+              {form.mode === FLINK_MODE.APPLICATION && initialData && (
                 <Field label="JAR File">
                   <Input
                     value={initialData.jar?.name ?? 'N/A'}
