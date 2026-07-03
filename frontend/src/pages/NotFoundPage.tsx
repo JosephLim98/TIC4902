@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import '../styles/NotFoundPage.css'
 import { MaterialIcon } from '@/components/MaterialIcon'
+import { Button } from '@/components/ui/button'
 
 export default function NotFoundPage() {
     return (
@@ -58,10 +59,10 @@ export default function NotFoundPage() {
                         <span>Back to Dashboard</span>
                     </Link>
 
-                    <button onClick={() => window.history.back()} className="secondary-button">
+                    <Button variant="outline" size="sm" onClick={() => window.history.back()}>
                         <MaterialIcon name="arrow_back" size={20}/> 
                         <span>Go Back</span>
-                    </button>
+                    </Button>
                 </div>
 
                 <div className="easter-egg">
