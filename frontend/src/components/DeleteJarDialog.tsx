@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { deleteJar, type Jar } from '@/api/jar'
 import { MaterialIcon } from './MaterialIcon'
+import type { ApiError } from '@/api/client';
 
 interface Props {
   jar: Jar | null
@@ -13,6 +14,13 @@ export function DeleteJarDialog({ jar, onClose, onSuccess }: Props) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Reset stale error state when dialog opens
+  useEffect(() => {
+    if (jar) {
+      setError(null)
+    }
+  }, [jar])
+
   async function handleDelete() {
     if (!jar) return
     setIsDeleting(true)
@@ -21,8 +29,8 @@ export function DeleteJarDialog({ jar, onClose, onSuccess }: Props) {
       await deleteJar(jar.id)
       onSuccess()
       onClose()
-    } catch {
-      setError('Failed to delete JAR. Please try again.')
+    } catch (err) {
+      setError((err as ApiError).message ?? 'Failed to delete JAR. Please try again.')
     } finally {
       setIsDeleting(false)
     }

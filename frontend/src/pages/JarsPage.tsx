@@ -4,21 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MaterialIcon } from '@/components/MaterialIcon'
 import { DeleteJarDialog } from '@/components/DeleteJarDialog'
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+import type { ApiError } from '@/api/client';
+import { formatBytes, formatDate } from '@/lib/utils'
 
 export default function JarsPage() {
   const [jars, setJars] = useState<Jar[]>([])
@@ -29,6 +16,7 @@ export default function JarsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Jar | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadSource, setUploadSource] = useState<'black' | 'white' | null>(null)
 
   async function fetchJars(signal?: AbortSignal) {
     setLoading(true)
@@ -37,11 +25,19 @@ export default function JarsPage() {
       const { jars } = await listJars(signal)
       setJars(jars)
     } catch (err) {
-      if ((err as { name?: string })?.name !== 'CanceledError')
-        setError('Failed to load jars. Try again later...')
+      const apiErr = err as ApiError
+      if (apiErr.name !== 'CanceledError') {
+        setError(apiErr.message ?? 'Failed to load jars. Try again later...')
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  function triggerUpload(source: 'black' | 'white') {
+    setUploadSource(source)
+    setUploadError(null)
+    fileInputRef.current?.click()
   }
 
   useEffect(() => {
@@ -92,7 +88,7 @@ export default function JarsPage() {
             variant="default"
             size="sm"
             disabled={uploadProgress !== null}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => triggerUpload('black')}
           >
             {uploadProgress !== null ? (
               <span className="flex items-center gap-2">
@@ -100,10 +96,13 @@ export default function JarsPage() {
                 Uploading {uploadProgress}%
               </span>
             ) : (
-              '+ Upload JAR'
+              <>
+                <MaterialIcon name="add" size={18} />
+                Upload JAR
+              </>
             )}
           </Button>
-          {uploadError && (
+          {uploadError && uploadSource === 'black' && (
             <p className="text-xs text-red-500 max-w-xs text-right">{uploadError}</p>
           )}
         </div>
@@ -161,9 +160,15 @@ export default function JarsPage() {
               : 'Upload a .jar file to get started.'}
           </p>
           {!search && (
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => fileInputRef.current?.click()}>
-              + Upload JAR
-            </Button>
+            <>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => triggerUpload('white')}>
+                <MaterialIcon name="add" size={18} />
+                Upload JAR
+              </Button>
+              {uploadError && uploadSource === 'white' && (
+                <p className="text-xs text-red-500 text-center mt-1">{uploadError}</p>
+              )}
+            </>
           )}
         </div>
       ) : (

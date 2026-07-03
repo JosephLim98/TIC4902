@@ -27,6 +27,15 @@ const Jar = sequelize.define('Jar', {
     allowNull: true,
     field: 'uploaded_by',
   },
+  // Optional fully-qualified main/entry class. Some JARs declare this in
+  // their own manifest (Main-Class) and Flink picks it up automatically —
+  // this field is only needed for JARs that don't (e.g. Flink's own
+  // WordCount example), so the user can supply it explicitly at upload time.
+  entryClass: {
+    type: DataTypes.STRING(512),
+    allowNull: true,
+    field: 'entry_class',
+  },
 }, {
   tableName: 'flink_jars',
   underscored: true,

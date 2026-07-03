@@ -8,6 +8,7 @@ function formatJar(jar) {
     objectName: jar.objectName,
     sizeBytes: jar.sizeBytes,
     uploadedBy: jar.uploadedBy,
+    entryClass: jar.entryClass ?? null,
     createdAt: jar.createdAt,
     url: jar.url,
   };
@@ -22,6 +23,7 @@ export async function uploadJar(req, res, next) {
       originalName: req.file.originalname,
       size: req.file.size,
       userId: req.user?.id,
+      entryClass: req.body?.entryClass
     });
     const jar = await jarService.uploadJar(req.file, req.user?.id);
     res.status(201).json(formatJar(jar));
