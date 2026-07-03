@@ -3,6 +3,7 @@ export const DEPLOYMENT_STATUS = {
     RUNNING:      'running',
     SUSPENDED:    'suspended',
     FAILED:       'failed',
+    SUCCEEDED:    'succeeded',
     ROLLING_BACK: 'rolling_back',
     DELETING:     'deleting',
     DELETED:      'deleted',

@@ -56,3 +56,18 @@ export async function deleteDeployment(name: string): Promise<Deployment> {
   const { data } = await client.delete<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}`);
   return data;
 }
+
+export async function resumeDeployment(name: string): Promise<Deployment> {
+  const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/resume`);
+  return data;
+}
+
+export async function stopDeployment(name: string): Promise<Deployment> {
+  const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/stop`);
+  return data;
+}
+
+export async function forceStopDeployment(name: string): Promise<Deployment> {
+  const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/force-stop`);
+  return data;
+}

@@ -1,4 +1,5 @@
-import type { DeploymentStatus } from '../../../utils/constants.js';
+import type { DeploymentStatus } from '@/utils/constants.js';
+export type { DeploymentStatus };
 import type { Jar } from '../api/jar';
 
 export type JarSummary = Pick<Jar, 'id' | 'name' | 'url'>
@@ -33,6 +34,7 @@ export interface Deployment {
   deploymentName: string;
   namespace: string;
   status: DeploymentStatus;
+  pendingAction?: 'stop' | 'force_stop' | 'resume' | 'delete' | null;
   deploymentMode: DeploymentMode;
   config: DeploymentConfig;
   createdAt: string;
@@ -46,6 +48,7 @@ export interface Deployment {
   };
   errorMessage?: string;
   jar?: JarSummary;
+  hasSavepoint?: boolean;
 }
 
 export interface ListDeploymentsResponse {

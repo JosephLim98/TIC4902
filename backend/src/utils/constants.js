@@ -1,4 +1,19 @@
-import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
+export const DEPLOYMENT_STATUS = {
+    CREATING:     'creating',
+    RUNNING:      'running',
+    SUSPENDED:    'suspended',
+    SUCCEEDED:    'succeeded',
+    FAILED:       'failed',
+    ROLLING_BACK: 'rolling_back',
+    DELETING:     'deleting',
+    DELETED:      'deleted',
+    UNKNOWN:      'unknown',
+};
+
+export const FLINK_MODE = {
+    APPLICATION: 'application',
+    SESSION: 'session'
+};
 
 //Flink k8s Operator CRD
 export const FLINK_CRD = {
@@ -11,7 +26,13 @@ export const FLINK_CRD = {
     SAVEPOINT_UPGRADE: 'savepoint',
     STATELESS_UPGRADE: 'stateless',
     FLINK_CONTAINER_NAME: 'flink-main-container'
-  };
+};
+
+export const FLINK_S3_PLUGIN_JAR = {
+    v1_18: 'flink-s3-fs-hadoop-1.18.1.jar',
+    v1_19: 'flink-s3-fs-hadoop-1.19.3.jar',
+    // v1_20: 'flink-s3-fs-hadoop-1.20.1.jar',
+}
 
 export const REGEX = {
     DNS_PATTERN: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, //Kube dependencies
