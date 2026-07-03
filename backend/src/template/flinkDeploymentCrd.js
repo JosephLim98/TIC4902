@@ -1,11 +1,18 @@
-import { FLINK_CRD } from "../utils/constants.js";
-import { FLINK_MODE } from "../../../utils/constants.ts";
-import { DEPLOYMENT_STATUS } from '../../../utils/constants.ts';
+import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS } from "../utils/constants.js";
+// import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS, FLINK_S3_PLUGIN_JAR } from "../utils/constants.js";
 
 export function generateFlinkDeployment(deploymentName, namespace, config, jarSpec = null, environmentVariables = null) {
     const { image, flinkVersion, serviceAccount, jobManager, taskManager } = config;
     const flinkConfiguration = { 
         'taskmanager.numberOfTaskSlots': taskManager.taskSlots.toString(),
+        'state.checkpoints.dir': 'file:///flink-data/checkpoints',
+        'state.savepoints.dir': 'file:///flink-data/savepoints',
+        // 'state.checkpoints.dir': 's3://flink-checkpoints/checkpoints',
+        // 'state.savepoints.dir': 's3://flink-checkpoints/savepoints',
+        // 's3.endpoint': 'http://minio.default.svc.cluster.local:9000',
+        // 's3.path.style.access': 'true',
+        // 's3.access-key': process.env.MINIO_ROOT_USER || 'minioadmin',
+        // 's3.secret-key': process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
         ...(jarSpec && { 'user.artifacts.raw-http-enabled': 'true' }),
         ...config.flinkConfiguration
     };
@@ -53,18 +60,36 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
         ...(jarSpec.mainClass && { entryClass: jarSpec.mainClass })
         };
     }
-    if (environmentVariables && Object.keys(environmentVariables).length > 0) {
-        crd.spec.podTemplate = {
-            spec: {
-            containers: [{
-                name: FLINK_CRD.FLINK_CONTAINER_NAME,
-                env: Object.entries(environmentVariables).map(([key, value]) => ({
-                name: key,
-                value: String(value)
-                }))
-            }]
-            }
-        };
-    }
+
+    // const podEnv = [
+    //   { name: 'ENABLE_BUILTIN_PLUGINS', value: 'flink-s3-fs-hadoop-1.19.3.jar' },
+    //   ...(environmentVariables
+    //     ? Object.entries(environmentVariables).map(([key, value]) => ({ name: key, value: String(value) }))
+    //     : [])
+    // ];
+
+    crd.spec.podTemplate = {
+      spec: {
+        containers: [{
+          name: FLINK_CRD.FLINK_CONTAINER_NAME,
+          // env: podEnv
+          volumeMounts: [{
+            name: 'flink-data',
+            mountPath: '/flink-data'
+        }],
+          ...(environmentVariables && Object.keys(environmentVariables).length > 0 && {
+            env: Object.entries(environmentVariables).map(([key, value]) => ({
+              name: key,
+              value: String(value)
+            }))
+          })
+        }],
+        volumes: [{
+          name: 'flink-data',
+          persistentVolumeClaim: { claimName: 'flink-data' }
+        }]
+      }
+    };
+
     return crd;
 }

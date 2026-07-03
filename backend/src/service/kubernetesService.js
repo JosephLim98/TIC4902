@@ -1,6 +1,5 @@
 import { KubernetesError } from "../utils/errors.js";
-import { FLINK_CRD } from "../utils/constants.js";
-import { FLINK_MODE } from "../../../utils/constants.ts";
+import { FLINK_CRD, FLINK_MODE } from "../utils/constants.js";
 import { generateFlinkDeployment } from "../template/flinkDeploymentCrd.js";
 import { k8sCustomApi } from "../config/kubernetes.js";
 import logger from "../utils/logger.js";
@@ -19,6 +18,7 @@ export async function getFlinkDeploymentStatus(deploymentName, namespace) {
             lifecycleState: response.status?.lifecycleState || null,
             jobManagerDeploymentStatus: response.status?.jobManagerDeploymentStatus || null,
             jobStatus: response.status?.jobStatus || null,
+            specJobState: response.spec?.job?.state || null,
             error: response.status?.error || null
         };
     } catch (error) {
@@ -89,9 +89,26 @@ async function patchCustomObjectHelper({ group, version, namespace, plural, name
     });
 }
 
+// Fetch live CRD as is (unlike getFlinkDeploymentStatus, which only extracts status fields)
+// Used before patching so we know whether optional sub-objects (podTemplate) already exist
+// JSON fetch 'replaces'/'add' cannot create missing intermediate parent objects, only the final key
+async function getRawFlinkDeployment(deploymentName, namespace) {
+    return await k8sCustomApi.getNamespacedCustomObject({
+        group: FLINK_CRD.GROUP,
+        version: FLINK_CRD.VERSION,
+        namespace,
+        plural: FLINK_CRD.PLURAL,
+        name: deploymentName
+    });
+}
+
 export async function patchFlinkDeployment(deploymentName, namespace, config, environmentVariables) {
     try {
         logger.info('Patching FlinkDeployment CRD via JSON Patch', { deploymentName });
+
+        const current = await getRawFlinkDeployment(deploymentName, namespace);
+        const currentContainers = current?.spec?.podTemplate?.spec?.containers;
+        const hasPodTemplateContainer = Array.isArray(currentContainers) && currentContainers.length > 0;
 
         const patch = [];
 
@@ -102,14 +119,14 @@ export async function patchFlinkDeployment(deploymentName, namespace, config, en
         if (config.flinkConfiguration || config.taskManager?.taskSlots) {
             const slots = String(config.taskManager?.taskSlots || '');
             patch.push({ 
-                op: 'replace', 
+                op: 'add', 
                 path: '/spec/flinkConfiguration/taskmanager.numberOfTaskSlots', 
                 value: slots 
             });
             // Add other flink configs if they exist
             if (config.flinkConfiguration) {
                 Object.entries(config.flinkConfiguration).forEach(([key, value]) => {
-                    patch.push({ op: 'replace', path: `/spec/flinkConfiguration/${key}`, value: String(value) });
+                    patch.push({ op: 'add', path: `/spec/flinkConfiguration/${key}`, value: String(value) });
                 });
             }
         }
@@ -131,10 +148,38 @@ export async function patchFlinkDeployment(deploymentName, namespace, config, en
                 name: key, 
                 value: String(value) 
             }));
+
+            if (hasPodTemplateContainer) {
+                // Container object already exists on live CRD (created with env vars)
+                patch.push({
+                    op: 'add',
+                    path:'/spec/podTemplate/spec/containers/0/env',
+                    value: envArray
+                });
+            } else {
+                // No podTemplate exists yet (Deployment was created without env vars)
+                // Since JSON Patch can't create missing intermediate objects one level at a time, 
+                // the whole podTemplate object must be added in a single operation instead of patching a sub-path of something that isn't there yet
+                patch.push({
+                    op: 'add',
+                    path: '/spec/podTemplate',
+                    value: {
+                        spec: {
+                            containers: [{
+                                name: FLINK_CRD.FLINK_CONTAINER_NAME,
+                                env: envArray
+                            }]
+                        }
+                    }
+                });
+            }
+        } else if (environmentVariables && hasPodTemplateContainer) {
+            // Caller explicitly cleared all env vars (environmentVariables === {}) on a deployment that previously had some
+            // Clear live array too instead of leaving it stale
             patch.push({
-                op: 'replace',
-                path: `/spec/podTemplate/spec/containers/0/env`, // Assuming the first container
-                value: envArray
+                op: 'add',
+                path: '/spec/podTemplate/spec/containers/0/env',
+                value: []
             });
         }
 
@@ -154,5 +199,52 @@ export async function patchFlinkDeployment(deploymentName, namespace, config, en
         const errorMsg = error.body?.message || error.message;
         logger.error('Failed to patch FlinkDeployment', { deploymentName, namespace, error: errorMsg });
         throw new KubernetesError(`Failed to patch FlinkDeployment: ${errorMsg}`, error);
+    }
+}
+
+export async function suspendFlinkDeployment(deploymentName, namespace, forceStop = false) {
+    try {
+        const patch = [
+            { op: 'replace', path: '/spec/job/state', value: 'suspended' },
+            { op: 'replace', path: '/spec/job/upgradeMode', value: forceStop ? 'stateless' : 'savepoint' }
+        ];
+        // if (forceStop) {
+        //     patch.push({
+        //         op: 'replace', path: '/spec/job/upgradeMode', value: 'stateless'
+        //     });
+        // }
+        await patchCustomObjectHelper({
+            group: FLINK_CRD.GROUP,
+            version: FLINK_CRD.VERSION,
+            namespace,
+            plural: FLINK_CRD.PLURAL,
+            name: deploymentName,
+            body: patch,
+        });
+        logger.info('Successfully suspended FlinkDeployment', { deploymentName, forceStop });
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to suspend FlinkDeployment', { deploymentName, error: errorMsg });
+        throw new KubernetesError(`Failed to suspend FlinkDeployment: ${errorMsg}`);
+    }
+}
+
+export async function resumeFlinkDeployment(deploymentName, namespace) {
+    try {
+        const patch = [
+            { op: 'replace', path: '/spec/job/state', value: 'running' },
+            { op: 'replace', path: '/spec/job/upgradeMode', value: 'savepoint' }
+        ];
+
+        await patchCustomObjectHelper({
+            group: FLINK_CRD.GROUP, version: FLINK_CRD.VERSION,
+            namespace, plural: FLINK_CRD.PLURAL, name: deploymentName, body: patch,
+        });
+
+        logger.info('Successfully resumed FlinkDeployment', { deploymentName });
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to resume FlinkDeployment', { deploymentName, error: errorMsg });
+        throw new KubernetesError(`Failed to resume FlinkDeployment: ${errorMsg}`);
     }
 }

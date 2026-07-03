@@ -3,11 +3,13 @@ import logger from '../utils/logger.js'
 
 function formatDeploymentResponse(deployment) {
     const crdResource = deployment.resources?.[0];
+    const ks = deployment.kubernetesStatus; 
     return {
         id: deployment.id,
         deploymentName: deployment.deploymentName,
         namespace: deployment.namespace,
         status: deployment.status,
+        pendingAction: deployment.pendingAction,
         deploymentMode: deployment.deploymentMode,
         config: deployment.config,
         createdAt: deployment.createdAt,
@@ -17,6 +19,8 @@ function formatDeploymentResponse(deployment) {
             uid: crdResource.uid,
             apiVersion: crdResource.apiVersion
         },
+        hasSavepoint: (ks?.jobStatus?.savepointInfo?.savepointHistory?.length > 0) || !!ks?.jobStatus?.upgradeSavepointPath,
+        ...(deployment.jar && { jar: { id: deployment.jar.id, name: deployment.jar.name } }),
         ...(deployment.environmentVariables && { environmentVariables: deployment.environmentVariables }),
         ...(deployment.jobParallelism && { jobParallelism: deployment.jobParallelism })
     };
@@ -84,6 +88,41 @@ export async function updateDeployment(req, res, next) {
         console.log('BACKEND RECEIVED BODY: ', JSON.stringify(req.body, null, 2));
         logger.info('Received deployment update request', { deploymentName });
         const deployment = await flinkService.updateDeployment(deploymentName, req.body);
+        res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function resumeDeployment(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info('Received resume deployment request', { deploymentName });
+        const deployment = await flinkService.resumeDeployment(deploymentName);
+        res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
+
+// graceful stop but takes a savepoint first
+export async function stopDeployment(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info('Received stop deployment request', { deploymentName });
+        const deployment = await flinkService.stopDeployment(deploymentName, false);
+        res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
+
+// no savepoint, immediate kill
+export async function forceStopDeployment(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info(`Received force stop deployment request for ${deploymentName}`, { deploymentName });
+        const deployment = await flinkService.stopDeployment(deploymentName, true);
         res.status(200).json(formatDeploymentResponse(deployment));
     } catch (error) {
         next(error);

@@ -10,7 +10,7 @@ const minioClient = new Minio.Client({
 });
 
 const BUCKET      = process.env.MINIO_BUCKET      || 'flink-jars';
-const PUBLIC_HOST = process.env.MINIO_PUBLIC_HOST || 'host.minikube.internal';
+const PUBLIC_HOST = process.env.MINIO_PUBLIC_HOST || 'minio.default.svc.cluster.local';
 const PUBLIC_PORT = process.env.MINIO_PORT        || '9000';
 
 export function buildJarUrl(objectName) {
