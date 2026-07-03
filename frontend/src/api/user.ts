@@ -7,6 +7,7 @@ export interface UserProfile {
     email: string;
     created_at: string;
     updated_at: string;
+    last_login_at: string | null;
 }
 
 function authHeader(): Record<string, string> {

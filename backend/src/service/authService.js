@@ -86,6 +86,9 @@ export async function loginService(email, password) {
     }
 
     const token = generateToken(user);
+
+    await pool.query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    
     return {
         id: user.id,
         username: user.username,

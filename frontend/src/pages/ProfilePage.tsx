@@ -203,11 +203,15 @@ export default function ProfilePage() {
             {/* Read-only info */}
             <Section title="Account Information" icon="info">
                 <div className="grid grid-cols-2 gap-4">
-                    <Field label="Member Since">
-                        <Input value={profile?.created_at ? new Date(profile.created_at).toLocaleString() : '' } disabled />
+                    <Field label="Last Login">
+                        <Input value={profile?.last_login_at ? new Date(profile.last_login_at).toLocaleString() : '' } disabled />
                     </Field>
 
-                    <Field label="Member Since">
+                    {/* <Field label="Member Since">
+                        <Input value={profile?.created_at ? new Date(profile.created_at).toLocaleString() : '' } disabled />
+                    </Field> */}
+
+                    <Field label="Updated At">
                         <Input value={profile?.updated_at ? new Date(profile.updated_at).toLocaleString() : '' } disabled />
                     </Field>
                 </div>

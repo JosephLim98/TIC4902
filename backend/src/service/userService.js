@@ -4,7 +4,7 @@ import pool from '../config/db.js';
 // Get a user's public profile by ID
 export async function getUserProfile(userId) {
     const result = await pool.query(
-        `SELECT id, username, email, created_at, updated_at FROM users WHERE id = $1`, 
+        `SELECT id, username, email, created_at, updated_at, last_login_at FROM users WHERE id = $1`, 
         [userId]
     );
 

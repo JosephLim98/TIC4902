@@ -11,12 +11,19 @@ const initDatabase = async () => {
   try {
     const migrationPath = path.join(
       __dirname,
-      "migrations",
-      "create_users_table.sql"
+      "migrations"
     );
-    const migrationSQL = fs.readFileSync(migrationPath, "utf8");
 
-    await pool.query(migrationSQL);
+    const migrationFiles = fs.readdirSync(migrationPath)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    for (const file of migrationFiles) {
+      const sql = fs.readFileSync(path.join(migrationPath, file), 'utf8');
+      await pool.query(sql);
+      console.log(`Ran migration: ${file}`);
+    }
+
     console.log("Database tables initialized successfully");
   } catch (error) {
     console.error("Error initializing database:", error);

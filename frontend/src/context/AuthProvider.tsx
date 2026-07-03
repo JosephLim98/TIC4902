@@ -152,7 +152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null);
     };
 
-    const updateUser = (fields: Partial<Pick<User, 'username', 'email'>>) => {
+    const updateUser = (fields: Partial<Pick<User, 'username' | 'email'>>) => {
         setUser(prev => {
             if (!prev) return prev
             const updated = { ...prev, ...fields }
