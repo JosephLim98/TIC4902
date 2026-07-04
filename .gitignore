@@ -5,6 +5,7 @@ backend/.env
 
 *.md
 !README.md
+!docs/**/*.md
 
 .vscode/
 
