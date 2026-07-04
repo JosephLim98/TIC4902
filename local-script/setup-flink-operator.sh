@@ -30,9 +30,6 @@ kubectl get serviceaccount flink > /dev/null 2>&1 || {
     --serviceaccount=default:flink
 }
 
-# Create flink-data PVC 
-kubectl apply -f k8s/flink-data-pvc.yaml
-
 # Verify
 if kubectl get crd flinkdeployments.flink.apache.org > /dev/null 2>&1; then
   echo "Setup complete"

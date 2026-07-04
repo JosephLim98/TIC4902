@@ -4,7 +4,11 @@ import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS } from "../utils/constants.js"
 export function generateFlinkDeployment(deploymentName, namespace, config, jarSpec = null, environmentVariables = null, stateBucketName = null) {
     const { image, flinkVersion, serviceAccount, jobManager, taskManager } = config;
 
-    const checkpointConfig = stateBucketName ? {
+    if (!stateBucketName) {
+        throw new Error(`generateFlinkDeployment: stateBucketName is required (deployment: ${deploymentName})`);
+    }
+
+    const checkpointConfig = {
         's3.endpoint':                       `http://${process.env.MINIO_INTERNAL_HOST || 'host.minikube.internal'}:${process.env.MINIO_INTERNAL_PORT || '9000'}`,
         's3.access-key':                     process.env.MINIO_ROOT_USER     || 'minioadmin',
         's3.secret-key':                     process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
@@ -15,18 +19,10 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
         'execution.checkpointing.interval':  '30000',
         'execution.checkpointing.mode':      'EXACTLY_ONCE',
         'execution.checkpointing.min-pause': '10000',
-    } : {};
+    };
 
     const flinkConfiguration = {
         'taskmanager.numberOfTaskSlots': taskManager.taskSlots.toString(),
-        'state.checkpoints.dir': 'file:///flink-data/checkpoints',
-        'state.savepoints.dir': 'file:///flink-data/savepoints',
-        // 'state.checkpoints.dir': 's3://flink-checkpoints/checkpoints',
-        // 'state.savepoints.dir': 's3://flink-checkpoints/savepoints',
-        // 's3.endpoint': 'http://minio.default.svc.cluster.local:9000',
-        // 's3.path.style.access': 'true',
-        // 's3.access-key': process.env.MINIO_ROOT_USER || 'minioadmin',
-        // 's3.secret-key': process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
         ...(jarSpec && { 'user.artifacts.raw-http-enabled': 'true' }),
         ...checkpointConfig,
         ...config.flinkConfiguration
@@ -88,20 +84,12 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
         containers: [{
           name: FLINK_CRD.FLINK_CONTAINER_NAME,
           // env: podEnv
-          volumeMounts: [{
-            name: 'flink-data',
-            mountPath: '/flink-data'
-        }],
           ...(environmentVariables && Object.keys(environmentVariables).length > 0 && {
             env: Object.entries(environmentVariables).map(([key, value]) => ({
               name: key,
               value: String(value)
             }))
           })
-        }],
-        volumes: [{
-          name: 'flink-data',
-          persistentVolumeClaim: { claimName: 'flink-data' }
         }]
       }
     };

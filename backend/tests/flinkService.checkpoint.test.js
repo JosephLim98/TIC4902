@@ -24,6 +24,10 @@ jest.unstable_mockModule('../src/utils/constants.js', () => ({
   },
   REGEX: {},
   ERROR_MESSAGES: {},
+  SAVEPOINT_POLL: {
+    INTERVAL_MS: 5000,
+    TIMEOUT_MS: 120000,
+  },
 }));
 
 // ── MinIO mocks ───────────────────────────────────────────────────────────────
@@ -196,18 +200,26 @@ describe('flinkService — checkpoint / state bucket wiring', () => {
 
   // ── createDeployment — session mode ────────────────────────────────────────
   describe('createDeployment — session mode', () => {
-    it('does NOT provision a state bucket', async () => {
-      const record = makeRecord({ deploymentMode: 'session', stateBucketName: null });
+    it('provisions a state bucket the same as application mode', async () => {
+      const record = makeRecord({ deploymentMode: 'session', stateBucketName: 'flink-my-session' });
       mockDeploymentFindOne.mockResolvedValueOnce(null);
       mockDeploymentCreate.mockResolvedValueOnce(record);
       mockCreateFlinkCluster.mockResolvedValue(mockCrd());
 
       await createDeployment({ deploymentName: 'my-session' });
 
-      expect(mockEnsureStateBucketExists).not.toHaveBeenCalled();
+      expect(mockBuildStateBucketName).toHaveBeenCalledWith('my-session');
+      expect(mockEnsureStateBucketExists).toHaveBeenCalledWith('flink-my-session');
       expect(mockDeploymentCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ stateBucketName: null }),
+        expect.objectContaining({ stateBucketName: 'flink-my-session' }),
         expect.anything()
+      );
+      expect(mockCreateFlinkCluster).toHaveBeenCalledWith(
+        'my-session', 'default',
+        expect.any(Object),
+        null,
+        undefined,
+        'flink-my-session'
       );
     });
   });
@@ -224,7 +236,7 @@ describe('flinkService — checkpoint / state bucket wiring', () => {
       expect(mockDeleteStateBucket).toHaveBeenCalledWith('flink-my-app');
     });
 
-    it('does NOT call deleteStateBucket when stateBucketName is null', async () => {
+    it('does NOT call deleteStateBucket for legacy rows with a null stateBucketName', async () => {
       const record = makeRecord({ status: 'running', stateBucketName: null });
       mockDeploymentFindOne.mockResolvedValueOnce(record);
       mockDeleteFlinkDeployment.mockResolvedValueOnce(undefined);
@@ -337,9 +349,7 @@ describe('flinkService — checkpoint / state bucket wiring', () => {
         lifecycleState: 'DEPLOYED',
         jobStatus: {
           state: 'FINISHED',
-          savepointInfo: {
-            lastSavepoint: { location: 's3://flink-my-app/savepoints/stop-sp-1' },
-          },
+          upgradeSavepointPath: 's3://flink-my-app/savepoints/stop-sp-1',
         },
         specJobState: 'suspended',
         error: null,
@@ -363,9 +373,7 @@ describe('flinkService — checkpoint / state bucket wiring', () => {
         jobStatus: {
           state: 'FINISHED',
           // Leftover location from an earlier stop cycle - must not be picked up by force_stop
-          savepointInfo: {
-            lastSavepoint: { location: 's3://flink-my-app/savepoints/leftover' },
-          },
+          upgradeSavepointPath: 's3://flink-my-app/savepoints/leftover',
         },
         specJobState: 'suspended',
         error: null,

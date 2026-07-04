@@ -81,12 +81,9 @@ export async function createDeployment(deploymentData){
         }
       }
 
-      let stateBucketName = null;
-      if (deploymentMode === 'application') {
-        stateBucketName = buildStateBucketName(deploymentName);
-        await ensureStateBucketExists(stateBucketName);
-        logger.info('Provisioned state bucket', { stateBucketName });
-      }
+      const stateBucketName = buildStateBucketName(deploymentName);
+      await ensureStateBucketExists(stateBucketName);
+      logger.info('Provisioned state bucket', { stateBucketName, deploymentMode });
 
       // Used to ensure atomicity
       const transaction = await sequelize.transaction();
@@ -323,9 +320,9 @@ async function syncDeployment(deployment) {
     const failedWhilePending = mappedStatus === DEPLOYMENT_STATUS.FAILED;
 
     if (isStopComplete || isResumeComplete || failedWhilePending) {
-      // Location can be undefined if  k8s status not sync yet skip update than use a undefined value
+      // Location can be undefined if k8s status not sync yet, skip update rather than store an undefined value.
       if (isStopComplete && deployment.pendingAction === 'stop') {
-        const location = kubernetesStatus?.jobStatus?.savepointInfo?.lastSavepoint?.location;
+        const location = kubernetesStatus?.jobStatus?.upgradeSavepointPath;
         if (location) {
           deployment.lastSavepointPath = location;
         }
