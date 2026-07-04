@@ -72,6 +72,8 @@ const mockDeploymentCreate  = jest.fn();
 const mockDeploymentFindOne = jest.fn();
 const mockDeploymentSave    = jest.fn();
 
+const mockSavepointFindOrCreate = jest.fn().mockResolvedValue([{}, true]);
+
 jest.unstable_mockModule('../src/models/index.js', () => ({
   Deployment: {
     create:  mockDeploymentCreate,
@@ -79,6 +81,11 @@ jest.unstable_mockModule('../src/models/index.js', () => ({
     findAll: jest.fn().mockResolvedValue([]),
   },
   Jar: {},
+  Savepoint: {
+    findOrCreate: mockSavepointFindOrCreate,
+    findOne:      jest.fn().mockResolvedValue(null),
+    findAll:      jest.fn().mockResolvedValue([]),
+  },
 }));
 
 const mockTransaction = {

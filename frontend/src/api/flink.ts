@@ -1,5 +1,5 @@
 import client from './client';
-import type { Deployment, ListDeploymentsResponse } from '../types';
+import type { Deployment, ListDeploymentsResponse, ListSavepointsResponse } from '../types';
 
 const DEPLOYMENTS_ENDPOINT = '/flink/deployments';
 
@@ -57,8 +57,18 @@ export async function deleteDeployment(name: string): Promise<Deployment> {
   return data;
 }
 
-export async function resumeDeployment(name: string): Promise<Deployment> {
-  const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/resume`);
+export interface ResumeDeploymentOptions {
+  savepointId?: number;
+  skipSavepoint?: boolean;
+}
+
+export async function resumeDeployment(name: string, options?: ResumeDeploymentOptions): Promise<Deployment> {
+  const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/resume`, options ?? {});
+  return data;
+}
+
+export async function listSavepoints(name: string, signal?: AbortSignal): Promise<ListSavepointsResponse> {
+  const { data } = await client.get<ListSavepointsResponse>(`${DEPLOYMENTS_ENDPOINT}/${name}/savepoints`, { signal });
   return data;
 }
 

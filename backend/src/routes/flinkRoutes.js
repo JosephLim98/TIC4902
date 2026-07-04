@@ -22,5 +22,6 @@ router.post('/deployments/:deploymentName/resume', flinkController.resumeDeploym
 router.post('/deployments/:deploymentName/stop', flinkController.stopDeployment);
 router.post('/deployments/:deploymentName/force-stop', flinkController.forceStopDeployment);
 router.post('/deployments/:deploymentName/savepoint', flinkController.triggerSavepoint);
+router.get('/deployments/:deploymentName/savepoints', flinkController.listSavepoints);
 
 export default router;

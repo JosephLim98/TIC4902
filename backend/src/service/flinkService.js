@@ -1,6 +1,6 @@
 import sequelize from '../config/database.js';
 import { FlinkConfig } from '../models/flinkConfigModel.js';
-import { Deployment, Jar } from '../models/index.js';
+import { Deployment, Jar, Savepoint } from '../models/index.js';
 import logger from '../utils/logger.js';
 import { DEPLOYMENT_STATUS, FLINK_MODE, SAVEPOINT_POLL } from '../utils/constants.js';
 import * as k8sService from './kubernetesService.js';
@@ -325,6 +325,10 @@ async function syncDeployment(deployment) {
         const location = kubernetesStatus?.jobStatus?.upgradeSavepointPath;
         if (location) {
           deployment.lastSavepointPath = location;
+          await Savepoint.findOrCreate({
+            where: { deploymentId: deployment.id, path: location },
+            defaults: { deploymentId: deployment.id, path: location, source: 'stop' },
+          });
         }
       }
       deployment.status = mappedStatus;
@@ -469,12 +473,27 @@ export async function triggerSavepoint(deploymentName) {
     if (isFreshCompletion) {
       deployment.lastSavepointPath = statusResult.lastSavepointPath;
       await deployment.save();
+      await Savepoint.findOrCreate({
+        where: { deploymentId: deployment.id, path: statusResult.lastSavepointPath },
+        defaults: { deploymentId: deployment.id, path: statusResult.lastSavepointPath, source: 'manual' },
+      });
       logger.info('Savepoint completed and path stored', { deploymentName, path: statusResult.lastSavepointPath });
       return { savepointPath: statusResult.lastSavepointPath };
     }
   }
 
   throw new KubernetesError(`Savepoint timed out after ${SAVEPOINT_POLL.TIMEOUT_MS / 1000}s for deployment '${deploymentName}'`);
+}
+
+export async function listSavepoints(deploymentName) {
+  const deployment = await Deployment.findOne({ where: { deploymentName } });
+  if (!deployment) throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+
+  const savepoints = await Savepoint.findAll({
+    where: { deploymentId: deployment.id },
+    order: [['created_at', 'DESC']],
+  });
+  return savepoints.map(sp => sp.toJSON());
 }
 
 export async function updateDeployment(deploymentName, updateData) {
@@ -604,13 +623,17 @@ export async function stopDeployment(deploymentName, forceStop = false) {
   
 }
 
-export async function resumeDeployment(deploymentName) {
+export async function resumeDeployment(deploymentName, { savepointId, skipSavepoint = false } = {}) {
   const deployment = await Deployment.findOne({ where: { deploymentName } });
   if (!deployment) {
     throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
   }
   if (deployment.deploymentMode !== FLINK_MODE.APPLICATION) {
     throw new ValidationError('Resume is only supported for application mode deployments')
+  }
+
+  if (savepointId != null && skipSavepoint) {
+    throw new ValidationError('Cannot specify both savepointId and skipSavepoint');
   }
 
   if (deployment.pendingAction) {
@@ -626,11 +649,33 @@ export async function resumeDeployment(deploymentName) {
   //   throw new ConflictError(`Deployment '${deploymentName}' is not suspended, failed, or succeeded`, deploymentName);
   // }
 
+  let chosenPath = null;
+  if (!skipSavepoint && savepointId != null) {
+    const chosen = await Savepoint.findOne({ where: { id: savepointId, deploymentId: deployment.id } });
+    if (!chosen) {
+      throw new NotFoundError(`Savepoint '${savepointId}' not found for deployment '${deploymentName}'`, deploymentName);
+    }
+
+    const mostRecent = await Savepoint.findOne({
+      where: { deploymentId: deployment.id },
+      order: [['created_at', 'DESC']],
+    });
+    if (!mostRecent || mostRecent.id !== chosen.id) {
+      chosenPath = chosen.path;
+    }
+  }
+
   deployment.pendingAction = 'resume';
   await deployment.save();
-  
+
   try {
-    await k8sService.resumeFlinkDeployment(deploymentName, deployment.namespace);
+    if (skipSavepoint) {
+      await k8sService.resumeWithoutSavepoint(deploymentName, deployment.namespace);
+    } else if (chosenPath) {
+      await k8sService.resumeFromSavepoint(deploymentName, deployment.namespace, chosenPath);
+    } else {
+      await k8sService.resumeFlinkDeployment(deploymentName, deployment.namespace);
+    }
   } catch (k8sError) {
     deployment.pendingAction = null;
     await deployment.save();
@@ -642,6 +687,6 @@ export async function resumeDeployment(deploymentName) {
 
   // Intentionally leave pendingAction set, similar to stopDeployment. Job hasn't actually restarted yet. It's only been asked to.
   // syncDeployment() clears pendingAction and flips status to RUNNING once k8s confirms the job actually came back up.
-  logger.info(`Resume requested for deployment ${deploymentName}`, { deploymentName });
+  logger.info(`Resume requested for deployment ${deploymentName}`, { deploymentName, savepointId: savepointId ?? null, skipSavepoint });
   return deployment.toJSON();
 }

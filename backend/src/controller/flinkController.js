@@ -110,9 +110,29 @@ export async function updateDeployment(req, res, next) {
 export async function resumeDeployment(req, res, next) {
     try {
         const { deploymentName } = req.params;
-        logger.info('Received resume deployment request', { deploymentName });
-        const deployment = await flinkService.resumeDeployment(deploymentName);
+        const { savepointId, skipSavepoint } = req.body ?? {};
+        logger.info('Received resume deployment request', { deploymentName, savepointId: savepointId ?? null, skipSavepoint: !!skipSavepoint });
+        const deployment = await flinkService.resumeDeployment(deploymentName, { savepointId, skipSavepoint });
         res.status(200).json(formatDeploymentResponse(deployment));
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function listSavepoints(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info('Received list savepoints request', { deploymentName });
+        const savepoints = await flinkService.listSavepoints(deploymentName);
+        res.status(200).json({
+            savepoints: savepoints.map(sp => ({
+                id: sp.id,
+                path: sp.path,
+                source: sp.source,
+                createdAt: sp.createdAt,
+            })),
+            total: savepoints.length,
+        });
     } catch (error) {
         next(error);
     }

@@ -57,3 +57,15 @@ export interface ListDeploymentsResponse {
   deployments: Deployment[];
   total: number;
 }
+
+export interface Savepoint {
+  id: number;
+  path: string;
+  source: 'manual' | 'stop';
+  createdAt: string;
+}
+
+export interface ListSavepointsResponse {
+  savepoints: Savepoint[];
+  total: number;
+}

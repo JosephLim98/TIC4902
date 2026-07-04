@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getDeployment, stopDeployment, triggerSavepoint } from '@/api/flink'
-import type { Deployment } from '@/types'
+import { getDeployment, stopDeployment, triggerSavepoint, listSavepoints } from '@/api/flink'
+import type { Deployment, Savepoint } from '@/types'
 import type { ApiError } from '@/api/client'
 import { formatDate } from '@/lib/utils'
 import { DEPLOYMENT_STATUS, FLINK_MODE, type DeploymentStatus } from '@/utils/constants'
@@ -10,6 +10,7 @@ import { Spinner } from '@/components/Spinner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MaterialIcon } from '@/components/MaterialIcon'
 import { DeleteDeploymentDialog } from '@/components/DeletePipelineModal'
 import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal'
@@ -84,7 +85,18 @@ export default function DeploymentDetailPage() {
 
   const [savepointLoading, setSavepointLoading] = useState(false);
   const [savepointError, setSavepointError] = useState<string | null>(null);
-  const [latestSavepointPath, setLatestSavepointPath] = useState<string | null>(null);
+  const [savepoints, setSavepoints] = useState<Savepoint[]>([]);
+
+  function refetchSavepoints() {
+    if (!name) {
+      return
+    }
+    listSavepoints(name)
+      .then((res) => setSavepoints(res.savepoints))
+      .catch(() => {
+        // keep showing the last known history on transient refetch failure
+      })
+  }
 
   function refetch() {
     if (!name) {
@@ -122,6 +134,17 @@ export default function DeploymentDetailPage() {
         if (err?.name !== 'CanceledError') setError(`Could not load deployment "${name}".`)
       })
       .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [name])
+
+  useEffect(() => {
+    if (!name) return
+    const controller = new AbortController()
+    listSavepoints(name, controller.signal)
+      .then((res) => setSavepoints(res.savepoints))
+      .catch(() => {
+        // non-fatal — State Storage section just shows no history
+      })
     return () => controller.abort()
   }, [name])
 
@@ -260,8 +283,8 @@ export default function DeploymentDetailPage() {
                     setSavepointLoading(true);
                     setSavepointError(null);
                     try {
-                      const result = await triggerSavepoint(deployment.deploymentName);
-                      setLatestSavepointPath(result.savepointPath);
+                      await triggerSavepoint(deployment.deploymentName);
+                      refetchSavepoints();
                     } catch (err: unknown) {
                       const msg = err instanceof Error ? err.message : 'Savepoint failed';
                       setSavepointError(msg);
@@ -358,10 +381,46 @@ export default function DeploymentDetailPage() {
             {deployment.deploymentMode === 'application' && (
               <Section title="State Storage">
                 <InfoItem label="State Bucket" value={deployment.stateBucketName} />
-                <InfoItem
-                  label="Last Savepoint"
-                  value={latestSavepointPath ?? deployment.lastSavepointPath}
-                />
+                <div className="col-span-2 flex flex-col gap-2">
+                  <span className="info-label">Savepoint History</span>
+                  <Table className="table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-auto">Path</TableHead>
+                        <TableHead className="w-24">Source</TableHead>
+                        <TableHead className="w-36">Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {savepoints.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-sm text-zinc-300">
+                            No savepoints yet
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        savepoints.map((sp) => (
+                          <TableRow key={sp.id}>
+                            <TableCell
+                              title={sp.path}
+                              className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-zinc-700"
+                            >
+                              {sp.path}
+                            </TableCell>
+                            <TableCell>
+                              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs capitalize text-zinc-600">
+                                {sp.source}
+                              </span>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-xs text-zinc-400">
+                              {formatDate(sp.createdAt)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </Section>
             )}
           </div>

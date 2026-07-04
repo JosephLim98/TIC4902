@@ -311,3 +311,50 @@ export async function resumeFlinkDeployment(deploymentName, namespace) {
         throw new KubernetesError(`Failed to resume FlinkDeployment: ${errorMsg}`);
     }
 }
+
+export async function resumeFromSavepoint(deploymentName, namespace, savepointPath) {
+    try {
+        const current = await getRawFlinkDeployment(deploymentName, namespace);
+        const hasInitialSavepointPath = current?.spec?.job?.initialSavepointPath !== undefined;
+        const hasSavepointRedeployNonce = current?.spec?.job?.savepointRedeployNonce !== undefined;
+
+        const nonce = Date.now();
+        const patch = [
+            { op: hasInitialSavepointPath ? 'replace' : 'add', path: '/spec/job/initialSavepointPath', value: savepointPath },
+            { op: hasSavepointRedeployNonce ? 'replace' : 'add', path: '/spec/job/savepointRedeployNonce', value: nonce },
+            { op: 'replace', path: '/spec/job/state', value: 'running' },
+            { op: 'replace', path: '/spec/job/upgradeMode', value: FLINK_CRD.SAVEPOINT_UPGRADE },
+        ];
+
+        await patchCustomObjectHelper({
+            group: FLINK_CRD.GROUP, version: FLINK_CRD.VERSION,
+            namespace, plural: FLINK_CRD.PLURAL, name: deploymentName, body: patch,
+        });
+
+        logger.info('Successfully triggered redeploy from savepoint', { deploymentName, savepointPath, nonce });
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to resume from savepoint', { deploymentName, savepointPath, error: errorMsg });
+        throw new KubernetesError(`Failed to resume from savepoint: ${errorMsg}`);
+    }
+}
+
+export async function resumeWithoutSavepoint(deploymentName, namespace) {
+    try {
+        const patch = [
+            { op: 'replace', path: '/spec/job/state', value: 'running' },
+            { op: 'replace', path: '/spec/job/upgradeMode', value: 'stateless' }
+        ];
+
+        await patchCustomObjectHelper({
+            group: FLINK_CRD.GROUP, version: FLINK_CRD.VERSION,
+            namespace, plural: FLINK_CRD.PLURAL, name: deploymentName, body: patch,
+        });
+
+        logger.info('Successfully resumed FlinkDeployment without savepoint', { deploymentName });
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to resume FlinkDeployment without savepoint', { deploymentName, error: errorMsg });
+        throw new KubernetesError(`Failed to resume without savepoint: ${errorMsg}`);
+    }
+}
