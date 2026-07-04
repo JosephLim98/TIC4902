@@ -7,3 +7,5 @@ backend/.env
 !README.md
 
 .vscode/
+
+**/target/
