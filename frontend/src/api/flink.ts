@@ -71,3 +71,8 @@ export async function forceStopDeployment(name: string): Promise<Deployment> {
   const { data } = await client.post<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}/force-stop`);
   return data;
 }
+
+export async function triggerSavepoint(name: string): Promise<{ savepointPath: string }> {
+  const { data } = await client.post<{ savepointPath: string }>(`${DEPLOYMENTS_ENDPOINT}/${name}/savepoint`);
+  return data;
+}

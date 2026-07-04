@@ -28,7 +28,7 @@ const mockDeployment = {
   deploymentName: "my-flink-job",
   namespace: "default",
   status: "running",
-  deploymentMode: "session",
+  deploymentMode: "application",
   config: { image: "flink:1.19" },
   createdAt: new Date("2026-04-11T00:00:00.000Z"),
   kubernetesStatus: mockK8sStatus,
@@ -39,6 +39,8 @@ const mockDeployment = {
       apiVersion: "flink.apache.org/v1beta1",
     },
   ],
+  stateBucketName: "flink-my-flink-job",
+  lastSavepointPath: "s3://flink-my-flink-job/savepoints/sp-1",
 };
 
 describe("Flink Controller Tests", () => {
@@ -73,6 +75,8 @@ describe("Flink Controller Tests", () => {
         uid: "abc-123",
         apiVersion: "flink.apache.org/v1beta1",
       });
+      expect(jsonCall.stateBucketName).toBe("flink-my-flink-job");
+      expect(jsonCall.lastSavepointPath).toBe("s3://flink-my-flink-job/savepoints/sp-1");
       expect(mockNext).not.toHaveBeenCalled();
     });
 

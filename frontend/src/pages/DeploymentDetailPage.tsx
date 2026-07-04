@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getDeployment, stopDeployment } from '@/api/flink'
+import { getDeployment, stopDeployment, triggerSavepoint } from '@/api/flink'
 import type { Deployment } from '@/types'
 import type { ApiError } from '@/api/client'
 import { formatDate } from '@/lib/utils'
@@ -82,13 +82,17 @@ export default function DeploymentDetailPage() {
   const [stopping, setStopping] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const [savepointLoading, setSavepointLoading] = useState(false);
+  const [savepointError, setSavepointError] = useState<string | null>(null);
+  const [latestSavepointPath, setLatestSavepointPath] = useState<string | null>(null);
+
   function refetch() {
     if (!name) {
       return
     }
     getDeployment(name)
       .then(setDeployment)
-      .catch(() => { 
+      .catch(() => {
         // keep showing the last known state on transient refetch failure
       })
   }
@@ -194,15 +198,15 @@ export default function DeploymentDetailPage() {
 
                 {/* Resume — only when stopped/force stopped or failed, and nothing else in flight */}
                 {deployment.status === DEPLOYMENT_STATUS.SUSPENDED && (
-                  <Button variant="outline" className="px-6 py-3 text-emerald-700 border-emerald-200 hover:bg-emerald-50" 
+                  <Button variant="outline" className="px-6 py-3 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                     disabled={hasPendingAction} onClick={() => setShowResumeModal(true)}>
                     <MaterialIcon name="play_arrow" size={18} className="mr-2" />
                     Resume
                   </Button>
                 )}
-                
+
                 {/* {([DEPLOYMENT_STATUS.SUSPENDED, DEPLOYMENT_STATUS.FAILED] as DeploymentStatus[]).includes(deployment.status) && (
-                  <Button variant="outline" className="px-6 py-3 text-emerald-700 border-emerald-200 hover:bg-emerald-50" 
+                  <Button variant="outline" className="px-6 py-3 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                     disabled={hasPendingAction} onClick={() => setShowResumeModal(true)}>
                     <MaterialIcon name="play_arrow" size={18} className="mr-2" />
                     Resume
@@ -246,10 +250,43 @@ export default function DeploymentDetailPage() {
                     Force Stop
                   </Button>
                 )}
+
+                {/* Take Savepoint — only when running */}
+                <Button
+                  variant="outline"
+                  className="px-6 py-3"
+                  disabled={deployment.status !== DEPLOYMENT_STATUS.RUNNING || savepointLoading}
+                  onClick={async () => {
+                    setSavepointLoading(true);
+                    setSavepointError(null);
+                    try {
+                      const result = await triggerSavepoint(deployment.deploymentName);
+                      setLatestSavepointPath(result.savepointPath);
+                    } catch (err: unknown) {
+                      const msg = err instanceof Error ? err.message : 'Savepoint failed';
+                      setSavepointError(msg);
+                    } finally {
+                      setSavepointLoading(false);
+                    }
+                  }}
+                >
+                  {savepointLoading ? (
+                    <>
+                      <span className="size-3.5 rounded-full border-2 border-zinc-400 border-t-zinc-900 animate-spin mr-2" />
+                      Taking Savepoint…
+                    </>
+                  ) : (
+                    <>
+                      <MaterialIcon name="save" size={18} className="mr-2" />
+                      Take Savepoint
+                    </>
+                  )}
+                </Button>
                 </>
               )}
 
               {/* Edit Button */}
+
               <Button
                 variant="outline"
                 className="px-6 py-3"
@@ -277,6 +314,10 @@ export default function DeploymentDetailPage() {
 
           {deployment.status === DEPLOYMENT_STATUS.FAILED && deployment.errorMessage && (
             <div className="error-banner">{deployment.errorMessage}</div>
+          )}
+
+          {savepointError && (
+            <div className="error-banner">{savepointError}</div>
           )}
 
           <div className="flex flex-col gap-3">
@@ -311,6 +352,16 @@ export default function DeploymentDetailPage() {
                 <InfoItem label="Name" value={deployment.flinkDeployment.name} />
                 <InfoItem label="UID" value={deployment.flinkDeployment.uid} />
                 <InfoItem label="API Version" value={deployment.flinkDeployment.apiVersion} />
+              </Section>
+            )}
+
+            {deployment.deploymentMode === 'application' && (
+              <Section title="State Storage">
+                <InfoItem label="State Bucket" value={deployment.stateBucketName} />
+                <InfoItem
+                  label="Last Savepoint"
+                  value={latestSavepointPath ?? deployment.lastSavepointPath}
+                />
               </Section>
             )}
           </div>

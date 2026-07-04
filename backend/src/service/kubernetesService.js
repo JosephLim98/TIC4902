@@ -49,12 +49,12 @@ export async function deleteFlinkDeployment(deploymentName, namespace) {
     }
 }
 
-export async function createFlinkCluster(deploymentName, namespace, config, jarSpec = null, environmentVariables = null){
+export async function createFlinkCluster(deploymentName, namespace, config, jarSpec = null, environmentVariables = null, stateBucketName = null){
     try {
         const mode = jarSpec ? FLINK_MODE.APPLICATION : FLINK_MODE.SESSION
         logger.info('Creating FlinkDeployment CRD', {deploymentName, namespace, mode});
 
-        const flinkDeployment = generateFlinkDeployment(deploymentName, namespace, config, jarSpec, environmentVariables);
+        const flinkDeployment = generateFlinkDeployment(deploymentName, namespace, config, jarSpec, environmentVariables, stateBucketName);
         const response = await k8sCustomApi.createNamespacedCustomObject({
             group: FLINK_CRD.GROUP,
             version: FLINK_CRD.VERSION,
@@ -100,6 +100,69 @@ async function getRawFlinkDeployment(deploymentName, namespace) {
         plural: FLINK_CRD.PLURAL,
         name: deploymentName
     });
+}
+
+export async function triggerSavepoint(deploymentName, namespace) {
+    const nonce = Date.now();
+    const patch = [
+        { op: 'add', path: '/spec/job/savepointTriggerNonce', value: nonce }
+    ];
+    try {
+        await patchCustomObjectHelper({
+            group: FLINK_CRD.GROUP,
+            version: FLINK_CRD.VERSION,
+            namespace,
+            plural: FLINK_CRD.PLURAL,
+            name: deploymentName,
+            body: patch,
+        });
+        logger.info('Savepoint trigger nonce applied', { deploymentName, nonce });
+        return nonce;
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to trigger savepoint', { deploymentName, error: errorMsg });
+        throw new KubernetesError(`Failed to trigger savepoint: ${errorMsg}`, error);
+    }
+}
+
+// Nonced triggered savepoint shows up as a seperate FlinkStateSnapshot resource, found using label and creation time
+export async function getSavepointStatus(deploymentName, namespace, triggerTimeMs) {
+    try {
+        const response = await k8sCustomApi.listNamespacedCustomObject({
+            group: FLINK_CRD.GROUP,
+            version: FLINK_CRD.VERSION,
+            namespace,
+            plural: FLINK_CRD.SNAPSHOT_PLURAL,
+            labelSelector: `job-reference.name=${deploymentName},snapshot.trigger-type=MANUAL,snapshot.type=SAVEPOINT`,
+        });
+        const items = response.items || [];
+
+        //Only search for savepoint after creationTime
+        const CREATION_TIMESTAMP_TOLERANCE_MS = 1000;
+        const candidates = items.filter(item => {
+            const created = Date.parse(item.metadata?.creationTimestamp);
+            return !Number.isNaN(created) && created >= triggerTimeMs - CREATION_TIMESTAMP_TOLERANCE_MS;
+        });
+        if (candidates.length === 0) {
+            return { lastSavepointPath: null, timestamp: null, completed: false, failed: false, failureReason: null };
+        }
+
+        candidates.sort((a, b) => Date.parse(b.metadata.creationTimestamp) - Date.parse(a.metadata.creationTimestamp));
+        const snapshot = candidates[0];
+        const state = snapshot.status?.state ?? null;
+        const lastSavepointPath = snapshot.status?.path ?? null;
+        const timestamp = snapshot.status?.resultTimestamp ? Date.parse(snapshot.status.resultTimestamp) : null;
+        return {
+            lastSavepointPath,
+            timestamp,
+            completed: state === 'COMPLETED',
+            failed: state === 'FAILED',
+            failureReason: state === 'FAILED' ? (snapshot.status?.error ?? null) : null,
+        };
+    } catch (error) {
+        logger.warn('Could not fetch savepoint status', { deploymentName, error: error.message });
+        return { lastSavepointPath: null, timestamp: null, completed: false, failed: false, failureReason: null };
+    }
 }
 
 export async function patchFlinkDeployment(deploymentName, namespace, config, environmentVariables) {

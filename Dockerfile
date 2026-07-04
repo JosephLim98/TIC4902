@@ -7,5 +7,9 @@ RUN wget -P /opt/flink/lib/ \
 
 RUN ls -lh /opt/flink/lib/flink-sql-connector-kafka-3.3.0-1.19.jar
 
+# Enable S3 FileSystem plugin for checkpoint/savepoint state storage (MinIO)
+RUN mkdir -p /opt/flink/plugins/s3-fs-hadoop && \
+    cp /opt/flink/opt/flink-s3-fs-hadoop-*.jar /opt/flink/plugins/s3-fs-hadoop/
+
 USER flink
 

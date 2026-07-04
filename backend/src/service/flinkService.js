@@ -2,10 +2,11 @@ import sequelize from '../config/database.js';
 import { FlinkConfig } from '../models/flinkConfigModel.js';
 import { Deployment, Jar } from '../models/index.js';
 import logger from '../utils/logger.js';
-import { DEPLOYMENT_STATUS, FLINK_MODE } from '../utils/constants.js';
+import { DEPLOYMENT_STATUS, FLINK_MODE, SAVEPOINT_POLL } from '../utils/constants.js';
 import * as k8sService from './kubernetesService.js';
 import { ConflictError, KubernetesError, NotFoundError, ValidationError } from '../utils/errors.js';
 import { getJarById } from './jarService.js';
+import { buildStateBucketName, ensureStateBucketExists, deleteStateBucket } from './minioService.js';
 
 async function getFlinkConfig() {
     const config = await FlinkConfig.findOne({order: [['id', 'ASC']]})
@@ -80,6 +81,13 @@ export async function createDeployment(deploymentData){
         }
       }
 
+      let stateBucketName = null;
+      if (deploymentMode === 'application') {
+        stateBucketName = buildStateBucketName(deploymentName);
+        await ensureStateBucketExists(stateBucketName);
+        logger.info('Provisioned state bucket', { stateBucketName });
+      }
+
       // Used to ensure atomicity
       const transaction = await sequelize.transaction();
 
@@ -123,7 +131,8 @@ export async function createDeployment(deploymentData){
             jarId: jarId || null,
             programArgs: programArgs || null,
             environmentVariables: environmentVariables || null,
-            jobParallelism: jobParallelism || null
+            jobParallelism: jobParallelism || null,
+            stateBucketName: stateBucketName || null,
           }, { transaction });
     
           logger.info('Created database record', {id: deployment.id, deploymentName, deploymentMode});
@@ -134,7 +143,7 @@ export async function createDeployment(deploymentData){
 
           let crdMetadata;
           try {
-            crdMetadata = await k8sService.createFlinkCluster(deploymentName, fullConfig.namespace, fullConfig, jarSpec, environmentVariables);
+            crdMetadata = await k8sService.createFlinkCluster(deploymentName, fullConfig.namespace, fullConfig, jarSpec, environmentVariables, stateBucketName);
             logger.info('Created FlinkDeployment CRD', {deploymentName, deploymentMode, uid: crdMetadata.uid});
           } catch (k8sError) {
             logger.error('FlinkDeployment CRD creation failed', {deploymentName, error: k8sError.message});
@@ -262,6 +271,17 @@ async function syncDeployment(deployment) {
     deployment.namespace
   );
 
+  // When CRD cannot be found, the resources created will be marked as deleted
+  if (!kubernetesStatus && !deployment.pendingAction && deployment.status !== DEPLOYMENT_STATUS.DELETED) {
+    deployment.status = DEPLOYMENT_STATUS.DELETED;
+    deployment.errorMessage = null;
+    await deployment.save();
+    logger.info('CRD not found in k8s, marking deployment as deleted', { deploymentName: deployment.deploymentName });
+    const done = deployment.toJSON();
+    done.kubernetesStatus = null;
+    return done;
+  }
+
   // While an action (stop/force-stop/resume/delete) is in flight, we still poll K8s,
   // but we must not clear the pendingAction or update status until K8s confirms completion of the requested transition.
   // Until then, we keep returning the pre-action status alongside the still-set pendingAction, 
@@ -303,6 +323,13 @@ async function syncDeployment(deployment) {
     const failedWhilePending = mappedStatus === DEPLOYMENT_STATUS.FAILED;
 
     if (isStopComplete || isResumeComplete || failedWhilePending) {
+      // Location can be undefined if  k8s status not sync yet skip update than use a undefined value
+      if (isStopComplete && deployment.pendingAction === 'stop') {
+        const location = kubernetesStatus?.jobStatus?.savepointInfo?.lastSavepoint?.location;
+        if (location) {
+          deployment.lastSavepointPath = location;
+        }
+      }
       deployment.status = mappedStatus;
       deployment.pendingAction = null;
       deployment.errorMessage = k8sErrorMessage;
@@ -381,6 +408,10 @@ export async function deleteDeployment(deploymentName) {
         throw k8sError;
     }
 
+    if (deployment.stateBucketName) {
+        await deleteStateBucket(deployment.stateBucketName);
+    }
+
     // Intentionally not marking this as DELETED yet and do not clear pendingAction. k8s API call only means deletion was accepted. The operator may still be finalizing it, e.g. draining/tearing down the pods, before hte CRD actually disappears
     // syncDeployment() flips status to DELETED and clears pendingAction once k8s confirms CRD is actually gone
     // Same pattern is used for stop/force-stop/resume above.
@@ -412,6 +443,41 @@ export async function listDeployments() {
       include: [{ model: Jar, as: 'jar', attributes: ['id', 'name' ]}]
     });
     return Promise.all(deployments.map(d => syncDeployment(d)));
+}
+
+export async function triggerSavepoint(deploymentName) {
+  const deployment = await Deployment.findOne({ where: { deploymentName } });
+  if (!deployment) throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+  if (deployment.deploymentMode !== 'application') {
+    throw new ValidationError('Savepoints are only supported for application mode deployments');
+  }
+  if (deployment.status !== DEPLOYMENT_STATUS.RUNNING) {
+    throw new ValidationError(`Savepoint can only be triggered on a running deployment (current: ${deployment.status})`);
+  }
+  
+  const triggerTimeMs = Date.now();
+  await k8sService.triggerSavepoint(deploymentName, deployment.namespace);
+  logger.info('Savepoint triggered, polling for completion', { deploymentName });
+
+  const deadline = Date.now() + SAVEPOINT_POLL.TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, SAVEPOINT_POLL.INTERVAL_MS));
+    const statusResult = await k8sService.getSavepointStatus(deploymentName, deployment.namespace, triggerTimeMs);
+    if (statusResult.failed) {
+      throw new KubernetesError(`Savepoint failed for deployment '${deploymentName}': ${statusResult.failureReason || 'unknown error'}`);
+    }
+    const isFreshCompletion = statusResult.completed && statusResult.lastSavepointPath
+      && statusResult.timestamp != null && statusResult.timestamp >= triggerTimeMs;
+    if (isFreshCompletion) {
+      deployment.lastSavepointPath = statusResult.lastSavepointPath;
+      await deployment.save();
+      logger.info('Savepoint completed and path stored', { deploymentName, path: statusResult.lastSavepointPath });
+      return { savepointPath: statusResult.lastSavepointPath };
+    }
+  }
+
+  throw new KubernetesError(`Savepoint timed out after ${SAVEPOINT_POLL.TIMEOUT_MS / 1000}s for deployment '${deploymentName}'`);
 }
 
 export async function updateDeployment(deploymentName, updateData) {

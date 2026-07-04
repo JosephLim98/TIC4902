@@ -14,12 +14,13 @@ router.post(
     flinkController.createDeployment
 )
 router.put(
-    '/deployments/:deploymentName', 
-    validateRequest(updateDeploymentSchema), 
+    '/deployments/:deploymentName',
+    validateRequest(updateDeploymentSchema),
     flinkController.updateDeployment
 );
 router.post('/deployments/:deploymentName/resume', flinkController.resumeDeployment);
 router.post('/deployments/:deploymentName/stop', flinkController.stopDeployment);
 router.post('/deployments/:deploymentName/force-stop', flinkController.forceStopDeployment);
+router.post('/deployments/:deploymentName/savepoint', flinkController.triggerSavepoint);
 
 export default router;

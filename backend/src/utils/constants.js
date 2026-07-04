@@ -20,12 +20,19 @@ export const FLINK_CRD = {
     GROUP: 'flink.apache.org',
     VERSION: 'v1beta1',
     PLURAL: 'flinkdeployments',
+    SNAPSHOT_PLURAL: 'flinkstatesnapshots',
     KIND: 'FlinkDeployment',
     APP: 'flink',
     FLINK_API: 'flink-api',
     SAVEPOINT_UPGRADE: 'savepoint',
     STATELESS_UPGRADE: 'stateless',
+    LAST_STATE_UPGRADE: 'last-state',
     FLINK_CONTAINER_NAME: 'flink-main-container'
+};
+
+export const SAVEPOINT_POLL = {
+    INTERVAL_MS: 5000,
+    TIMEOUT_MS: 120000,
 };
 
 export const FLINK_S3_PLUGIN_JAR = {

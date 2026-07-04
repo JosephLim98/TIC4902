@@ -49,3 +49,36 @@ export async function deleteJar(objectName) {
   await minioClient.removeObject(BUCKET, objectName);
   logger.info('Deleted JAR from MinIO', { bucket: BUCKET, objectName });
 }
+
+export function buildStateBucketName(deploymentName) {
+  return `flink-${deploymentName.slice(0, 57)}`;
+}
+
+export async function ensureStateBucketExists(bucketName) {
+  const exists = await minioClient.bucketExists(bucketName);
+  if (exists) {
+    logger.info('State bucket already exists', { bucketName });
+    return;
+  }
+  await minioClient.makeBucket(bucketName, 'us-east-1');
+  logger.info('Created state bucket', { bucketName });
+}
+
+export async function deleteStateBucket(bucketName) {
+  try {
+    const objectsList = [];
+    const stream = minioClient.listObjects(bucketName, '', true);
+    await new Promise((resolve, reject) => {
+      stream.on('data', obj => objectsList.push(obj.name));
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
+    if (objectsList.length > 0) {
+      await minioClient.removeObjects(bucketName, objectsList);
+    }
+    await minioClient.removeBucket(bucketName);
+    logger.info('Deleted state bucket', { bucketName });
+  } catch (err) {
+    logger.warn('Could not delete state bucket', { bucketName, error: err.message });
+  }
+}

@@ -22,7 +22,9 @@ function formatDeploymentResponse(deployment) {
         hasSavepoint: (ks?.jobStatus?.savepointInfo?.savepointHistory?.length > 0) || !!ks?.jobStatus?.upgradeSavepointPath,
         ...(deployment.jar && { jar: { id: deployment.jar.id, name: deployment.jar.name } }),
         ...(deployment.environmentVariables && { environmentVariables: deployment.environmentVariables }),
-        ...(deployment.jobParallelism && { jobParallelism: deployment.jobParallelism })
+        ...(deployment.jobParallelism     && { jobParallelism: deployment.jobParallelism }),
+        ...(deployment.stateBucketName    && { stateBucketName: deployment.stateBucketName }),
+        ...(deployment.lastSavepointPath  && { lastSavepointPath: deployment.lastSavepointPath }),
     };
 }
 
@@ -78,6 +80,17 @@ export async function listDeployments(req, res, next) {
             total: deployments.length
         });
     } catch(error) {
+        next(error);
+    }
+}
+
+export async function triggerSavepoint(req, res, next) {
+    try {
+        const { deploymentName } = req.params;
+        logger.info('Received savepoint trigger request', { deploymentName });
+        const result = await flinkService.triggerSavepoint(deploymentName);
+        res.status(200).json(result);
+    } catch (error) {
         next(error);
     }
 }

@@ -1,9 +1,23 @@
 import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS } from "../utils/constants.js";
 // import { FLINK_CRD, FLINK_MODE, DEPLOYMENT_STATUS, FLINK_S3_PLUGIN_JAR } from "../utils/constants.js";
 
-export function generateFlinkDeployment(deploymentName, namespace, config, jarSpec = null, environmentVariables = null) {
+export function generateFlinkDeployment(deploymentName, namespace, config, jarSpec = null, environmentVariables = null, stateBucketName = null) {
     const { image, flinkVersion, serviceAccount, jobManager, taskManager } = config;
-    const flinkConfiguration = { 
+
+    const checkpointConfig = stateBucketName ? {
+        's3.endpoint':                       `http://${process.env.MINIO_INTERNAL_HOST || 'host.minikube.internal'}:${process.env.MINIO_INTERNAL_PORT || '9000'}`,
+        's3.access-key':                     process.env.MINIO_ROOT_USER     || 'minioadmin',
+        's3.secret-key':                     process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
+        's3.path.style.access':              'true',
+        'state.backend.type':                'hashmap',
+        'state.checkpoints.dir':             `s3://${stateBucketName}/checkpoints`,
+        'state.savepoints.dir':              `s3://${stateBucketName}/savepoints`,
+        'execution.checkpointing.interval':  '30000',
+        'execution.checkpointing.mode':      'EXACTLY_ONCE',
+        'execution.checkpointing.min-pause': '10000',
+    } : {};
+
+    const flinkConfiguration = {
         'taskmanager.numberOfTaskSlots': taskManager.taskSlots.toString(),
         'state.checkpoints.dir': 'file:///flink-data/checkpoints',
         'state.savepoints.dir': 'file:///flink-data/savepoints',
@@ -14,6 +28,7 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
         // 's3.access-key': process.env.MINIO_ROOT_USER || 'minioadmin',
         // 's3.secret-key': process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
         ...(jarSpec && { 'user.artifacts.raw-http-enabled': 'true' }),
+        ...checkpointConfig,
         ...config.flinkConfiguration
     };
 
@@ -55,7 +70,7 @@ export function generateFlinkDeployment(deploymentName, namespace, config, jarSp
     crd.spec.job = {
         jarURI: jarSpec.jarUrl,
         state: DEPLOYMENT_STATUS.RUNNING,
-        upgradeMode: FLINK_CRD.STATELESS_UPGRADE,
+        upgradeMode: FLINK_CRD.LAST_STATE_UPGRADE,
         ...(jarSpec.parallelism && { parallelism: jarSpec.parallelism }),
         ...(jarSpec.mainClass && { entryClass: jarSpec.mainClass })
         };

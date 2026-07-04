@@ -76,11 +76,24 @@ const Deployment = sequelize.define('Deployment', {
         type: DataTypes.ENUM('stop', 'force_stop', 'resume', 'delete'),
         allowNull: true,
         field: 'pending_action'
+      },
+      stateBucketName: {
+        type: DataTypes.STRING(63),
+        allowNull: true,
+        field: 'state_bucket_name'
+      },
+      lastSavepointPath: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'last_savepoint_path'
       }
 }, {
     tableName: 'flink_deployments',
     validate: {
         applicationRequiresJar() {
+          if (!this.isNewRecord && !this.changed('deploymentMode') && !this.changed('jarId')) {
+            return;
+          }
           if (this.deploymentMode === 'application' && !this.jarId) {
             throw new Error('Application mode deployments require a JAR reference');
           }

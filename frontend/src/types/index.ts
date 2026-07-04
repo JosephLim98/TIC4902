@@ -49,6 +49,8 @@ export interface Deployment {
   errorMessage?: string;
   jar?: JarSummary;
   hasSavepoint?: boolean;
+  stateBucketName?: string;
+  lastSavepointPath?: string;
 }
 
 export interface ListDeploymentsResponse {
