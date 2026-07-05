@@ -60,7 +60,7 @@ npm run dev              # http://localhost:5173
 | Frontend | http://localhost:5173 |
 | Backend API docs (Swagger) | http://localhost:3000/api-docs |
 | Kafka UI | http://localhost:8080 |
-| MinIO Console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+| MinIO Console | http://localhost:9001 |
 
 ## Project Structure
 
@@ -74,10 +74,10 @@ docs/            Reference guides (API, Kubernetes deployment, debugging)
 
 ## Documentation
 
-- [API Reference](docs/api-reference.md) — deployment & JAR management endpoints, curl examples
-- [Kubernetes Deployment Guide](docs/kubernetes-deployment.md) — Minikube setup, deploying Flink, accessing dashboards
-- [Debugging Guide](docs/debugging.md) — common errors and fixes
-- [Testing Savepoints](docs/testing-savepoints.md) — verifying stop/resume state recovery
+- [API Reference](docs/api-reference.md): deployment & JAR management endpoints, curl examples
+- [Kubernetes Deployment Guide](docs/kubernetes-deployment.md): Minikube setup, deploying Flink, accessing dashboards
+- [Debugging Guide](docs/debugging.md): common errors and fixes
+- [Testing Savepoints](docs/testing-savepoints.md): verifying stop/resume state recovery
 
 ## License
 
