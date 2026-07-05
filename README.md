@@ -1,367 +1,84 @@
-# TIC4902
-Capstone project for Group 4
+# Flink Data Platform
 
+A management UI for Apache Flink deployments on Kubernetes: create, monitor, and control Flink jobs running via the [Flink Kubernetes Operator](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-stable/). Built as the TIC4902 capstone project
 
-## Frontend
-Head to frontend folder
-```
-cd frontend
-```
-Install the dependencies:
+![Node](https://img.shields.io/badge/Node.js-backend-339933?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React_19-frontend-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-typed-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-streaming-231F20?logo=apachekafka&logoColor=white)
+![Flink](https://img.shields.io/badge/Apache_Flink-orchestration-E6526F?logo=apacheflink&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-informational)
+
+## Dashboard
+![Flink Data Platform Dashboard](asset/image.png)
+
+## Features
+
+- **Pipeline creation**: configure and launch Flink jobs (image, parallelism, JobManager/TaskManager resources) through the UI, backed by the Flink Kubernetes Operator CRD
+- **Pipeline updates & deletion**: edit an existing deployment's config or remove it entirely
+- **JAR management**: upload, list, and delete job JARs in object storage, and reference them directly when creating a deployment
+- **Stop / start / force-stop**: graceful stop takes a savepoint before tearing the job down and force-stop skips it for a stateless teardown
+- **Savepoint management**: trigger a savepoint on demand and list all savepoints recorded for a deployment
+- **Resume from savepoint**: restart a deployment from its last savepoint, a specific savepoint you pick, or skip state restore entirely
+- **Live status sync**: deployment status merges the database record with live Kubernetes status, so it stays accurate even if the DB and cluster drift
+- **Auth & accounts**: JWT-based register/login, plus profile view/update, password change, and account deletion
+
+## Tech Stack
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | React 19, Vite, TypeScript, Tailwind CSS v4, shadcn/ui, react-router-dom, axios |
+| Backend | Node.js, Express, Sequelize (PostgreSQL), `@kubernetes/client-node`, JWT auth |
+| Data & Infra | PostgreSQL, Kafka (3-broker), MinIO (object storage), Flink Kubernetes Operator on Minikube |
+
+## Quick Start
+
 ```bash
-npm install
-```
-
-### Development
-#### Set Up
-
-```bash
-./local-script/setup-flink-operator.sh
-```
-
-This script will:
-- Start Minikube if not running
-- Install cert-manager
-- Install Flink Kubernetes Operator
-- Create Flink service account
-
-Start the development server with HMR:
-```bash
-npm run dev
-```
-
-### Frontend Tech Stack
-
-| Library | Purpose |
-|---------|---------|
-| **React 19** | UI framework for components, state, effects |
-| **Vite 7** | Dev server with hot reload |
-| **TypeScript** | Used for type safety |
-| **Tailwind CSS v4** | Utility classes for layout and styling directly in JSX |
-| **shadcn/ui** | Pre-built accessible components (Table, Card, Badge, Button, Input, Separator) generated into `src/components/ui/` |
-| **@base-ui/react** | Low-level headless primitives that shadcn/ui is built on |
-| **class-variance-authority** | Defines component variants (e.g. button sizes/styles) inside shadcn components |
-| **clsx + tailwind-merge** | Combined via `cn()` in `src/lib/utils.ts` to safely merges Tailwind classes without conflicts for shadcn components |
-| **react-router-dom v7** | Client-side routing — `<BrowserRouter>`, `<Routes>`, `useNavigate`, `useParams` |
-| **axios** | HTTP client — single instance in `src/api/client.ts`, API functions in `src/api/flink.ts` |
-
-### Add a new shadcn component
-```bash
-cd frontend
-npx shadcn@latest add 
-```
-There will be a drop down of the list of component to select from. Once added component appears in `src/components/ui/`
-
-## Backend
-Head to backend folder
-```
-cd backend
-```
-Copy the example environment file and fill in your values:
-```bash
-cp .env.example .env
-```
-> Edit `.env` with your database credentials, JWT secret, and MinIO settings before starting the server.
-
-Install dependencies
-```
-nvm use
-npm install 
-```
-Run the server
-```
-npm run dev
-```
-
-### API documentation (OpenAPI + Swagger UI)
-
-The backend exposes **interactive API documentation** powered by OpenAPI 3 and Swagger UI. After `npm run dev`, open **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)** in a browser. The machine-readable spec is at **[http://localhost:3000/api-docs.json](http://localhost:3000/api-docs.json)** (for Postman import, codegen, or CI). The OpenAPI document lives in `backend/src/docs/openapi.json`.
-
-**How to use `/api-docs`:**
-
-1. Pick a **tag** (Health, Auth, Flink) and expand an operation.
-2. Read the summary, parameters, and example **Request body** / responses.
-3. Click **Try it out**, edit path or JSON fields if needed, then **Execute**. The response body and HTTP status appear below.
-4. If your API is not on `localhost:3000`, change the **Servers** dropdown at the top (or edit `servers` in `openapi.json` for your environment).
-
-### API - Get Flink Deployment
-
-**List all deployments:**
-```bash
-curl http://localhost:3000/api/flink/deployments
-```
-
-**Get single deployment by name:**
-```bash
-curl http://localhost:3000/api/flink/deployments/my-flink-job
-```
-
-**Response includes live Kubernetes status:**
-```json
-{
-  "id": 1,
-  "deploymentName": "my-flink-job",
-  "namespace": "default",
-  "status": "running",
-  "deploymentMode": "session",
-  "config": { "...": "..." },
-  "createdAt": "...",
-  "kubernetesStatus": {
-    "lifecycleState": "STABLE",
-    "jobManagerDeploymentStatus": "READY",
-    "jobStatus": null,
-    "error": null
-  },
-  "flinkDeployment": {
-    "name": "my-flink-job",
-    "uid": "...",
-    "apiVersion": "flink.apache.org/v1beta1"
-  }
-}
-```
-
-### API - Create Flink Deployment
-
-**Simplest request**
-```bash
-curl -X POST http://localhost:3000/api/flink/deployments \
-  -H "Content-Type: application/json" \
-  -d '{"deploymentName": "my-flink-job"}'
-```
-
-**Full request with all options:**
-```bash
-curl -X POST http://localhost:3000/api/flink/deployments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deploymentName": "my-flink-job",
-    "namespace": "default",
-    "environmentVariables": {"KEY": "value"},
-    "jobParallelism": 2,
-    "config": {
-      "image": "flink:1.19",
-      "flinkVersion": "v1_19",
-      "serviceAccount": "flink",
-      "jobManager": {
-        "memory": "1024m",
-        "cpu": 0.5,
-        "replicas": 1
-      },
-      "taskManager": {
-        "memory": "1024m",
-        "cpu": 0.5,
-        "replicas": 1,
-        "taskSlots": 1
-      }
-    }
-  }'
-```
-
-**Parameters:**
-| Field | Required | Description |
-|-------|----------|-------------|
-| deploymentName | Yes | Unique name (1-63 chars, DNS format) |
-| namespace | No | Kubernetes namespace (default: "default") |
-| environmentVariables | No | Key-value pairs for env vars |
-| jobParallelism | No | Job parallelism (1-1024) |
-| config.image | No | Flink image |
-| config.jobManager.memory | No | Memory (e.g., "1024m", "2g") |
-| config.jobManager.cpu | No | CPU cores (0.1-32) |
-| config.taskManager.memory | No | Memory |
-| config.taskManager.cpu | No | CPU cores |
-| config.taskManager.replicas | No | Number of TaskManagers (1-100) |
-| config.taskManager.taskSlots | No | Slots per TaskManager (1-32) |
-
-## API - JAR Management
-
-### List all JARs
-```bash
-curl http://localhost:3000/api/jars
-```
-
-**Response:**
-```json
-{
-  "jars": [
-    {
-      "id": 7,
-      "name": "WordCount.jar",
-      "objectName": "5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar",
-      "sizeBytes": "14661",
-      "uploadedBy": null,
-      "createdAt": "2026-06-21T07:50:08.411Z",
-      "url": "http://host.minikube.internal:9000/flink-jars/5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar"
-    }
-  ],
-  "total": 1
-}
-```
-
-### Upload a JAR
-```bash
-curl -X POST http://localhost:3000/api/jars \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@WordCount.jar;type=application/java-archive"
-```
-
-**Response:**
-```json
-{
-  "id": 7,
-  "name": "WordCount.jar",
-  "objectName": "5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar",
-  "sizeBytes": "14661",
-  "uploadedBy": null,
-  "createdAt": "2026-06-21T07:50:08.411Z",
-  "url": "http://host.minikube.internal:9000/flink-jars/5e0b40fe-a533-4e7e-8b70-31f113882b67-WordCount.jar"
-}
-```
-
-**Constraints:** `.jar` extension required, max 500 MB. The file is stored in MinIO and the returned `url` is what Flink pods use to fetch the JAR at job start time.
-
-## Database, Kafka, and MinIO
-Ensure your are at root level of project to run docker compose
-```bash
-docker compose up -d  
-```
-
-Access Kafka UI at `http://localhost:8080`
-
-Access MinIO Console at `http://localhost:9001` (username: `minioadmin`, password: `minioadmin`) use this to browse buckets, view uploaded JAR files, and manage object storage.
-
-## Kubernetes Deployment
-
-### Prerequisites
-
-1. Install Minikube and kubectl:
-```bash
-brew install minikube kubectl
-```
-
-2. Start Minikube cluster:
-```bash
-minikube start --driver=docker --memory=4096 --cpus=2
-```
-
-3. Verify cluster is running:
-```bash
-kubectl cluster-info
-kubectl get nodes
-```
-
-Tear down:
-```bash
-# Delete cluster
-minikube delete
-# Stop cluster
-minikube stop
-```
-
-### Deploy Flink on Kubernetes
-
-1. Ensure Minikube is running and Docker Compose services (Kafka) are up:
-```bash
-# Check Minikube status
-minikube status
-
-# If not running
-minikube start --driver=docker --memory=4096 --cpus=2
+# 1. Start shared infra such as PostgreSQL, Kafka, Kafka UI, MinIO
 docker compose up -d
+
+# 2. Set up Flink Kubernetes Operator 
+./local-script/setup-flink-operator.sh
+
+# 3. Backend
+cd backend
+cp .env.example .env   # fill in DB, JWT, MinIO settings
+npm install
+npm run dev             # http://localhost:3000, Swagger at /api-docs
+
+# 4. Frontend
+cd frontend
+npm install
+npm run dev              # http://localhost:5173
 ```
 
-2. Build the custom Flink image with Kafka connector
-```bash
-./local-script/build-load.sh
+**Useful URLs once running:**
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API docs (Swagger) | http://localhost:3000/api-docs |
+| Kafka UI | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+
+## Project Structure
+
+```
+backend/        Express API, Sequelize models, Kubernetes + MinIO services
+frontend/       React app (Vite, shadcn/ui)
+k8s/             Raw Kubernetes manifests (JobManager/TaskManager/MinIO)
+local-script/    Setup, build, deploy, and test scripts for Minikube + Flink
+docs/            Reference guides (API, Kubernetes deployment, debugging)
 ```
 
-3. Deploy Flink to Kubernetes:
-```bash
-./local-script/deploy-flink.sh
-```
+## Documentation
 
-4. Access Flink Dashboard:
-```bash
-kubectl port-forward svc/flink-jobmanager-rest 8081:8081
-# Optional
-minikube service flink-jobmanager-rest --url
-```
+- [API Reference](docs/api-reference.md) — deployment & JAR management endpoints, curl examples
+- [Kubernetes Deployment Guide](docs/kubernetes-deployment.md) — Minikube setup, deploying Flink, accessing dashboards
+- [Debugging Guide](docs/debugging.md) — common errors and fixes
+- [Testing Savepoints](docs/testing-savepoints.md) — verifying stop/resume state recovery
 
-Access the Flink UI at `http://localhost:8081`
+## License
 
-### Access Flink UI for a Specific Deployment
-
-Each FlinkDeployment created through the management UI gets its own Kubernetes service named `<deployment-name>-rest`. To open the Flink dashboard for a specific deployment:
-
-1. List your deployments and their services:
-```bash
-kubectl get flinkdeployments
-kubectl get service
-```
-
-2. Port-forward the target deployment's REST service:
-```bash
-kubectl port-forward svc/<deployment-name>-rest 8081:8081
-```
-
-For example, to access the dashboard for a deployment named `test-myjar`:
-```bash
-kubectl port-forward svc/test-myjar-rest 8081:8081
-```
-
-3. Open **[http://localhost:8081](http://localhost:8081)** in your browser.
-
-> If you have multiple deployments and want to access them simultaneously, forward each to a different local port (e.g. `8082:8081`, `8083:8081`).
-
-5. Submit SQL Job:
-```bash
-./local-script/submit-flink-job.sh
-# Manual
-kubectl exec -it flink-sql-client -- /opt/flink/bin/sql-client.sh
-```
-
-6. Test the pipeline:
-Verify on localhost:8080 or check via cli
-```bash
-docker exec -it kafka-1 kafka-console-producer \
-  --bootstrap-server localhost:9092 \
-  --topic source
-
-{"message":"test message 1"}
-
-docker exec -it kafka-1 kafka-console-consumer \
-  --bootstrap-server localhost:9092 \
-  --topic sink \
-  --from-beginning
-```
-
-7. Clean up Flink deployment:
-```bash
-# Delete Flink resources
-kubectl delete -f k8s/
-
-# Or delete individual components
-kubectl delete pod flink-sql-client
-kubectl delete deployment flink-taskmanager flink-jobmanager
-kubectl delete service flink-jobmanager flink-jobmanager-rest
-kubectl delete configmap flink-config
-```
-
-## Debugging
-
-### Failed to create deployment
-#### Issue
-
-If you get this error it might be that the Flink CRD is not configured properly
-```bash
-Deployment failed, transaction rolled back {"deploymentName":"my-flink-job-123","error":"Failed to create FlinkDeployment: HTTP-Code: 404\nMessage: Unknown API Status Code!\nBody: \"404 page not found\\n\"\nHeaders: {\"audit-id\":\"7983fa8e-5d60-4684-a919-b0e3d17430b8\",\"cache-control\":\"no-cache, private\",\"connection\":\"close\",\"content-length\":\"19\",\"content-type\":\"text/plain; charset=utf-8\",\"date\":\"Sat, 11 Apr 2026 10:41:17 GMT\",\"x-content-type-options\":\"nosniff\",\"x-kubernetes-pf-flowschema-uid\":\"17766ff1-3276-423b-93a9-f158364d822f\",\"x-kubernetes-pf-prioritylevel-uid\":\"ee7d3d6e-1b26-451c-bdd5-05c43bb65009\"}"}
-```
-#### Possible Solution
-1. Check if Flink CRD is available
-```bash
-kubectl get crd flinkdeployments.flink.apache.org 
-```
-2. If you get this error 
-```bash
-Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io "flinkdeployments.flink.apache.org" not found
-```
-3. You can re-run `./local-script/setup-flink-operator.sh`
+[MIT](LICENSE)
