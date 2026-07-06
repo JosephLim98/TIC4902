@@ -48,7 +48,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/api/auth/register": {
@@ -109,7 +110,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/api/auth/login": {
@@ -170,7 +172,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/api/jars": {
@@ -470,6 +473,419 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}/stop": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "post": {
+        "tags": ["Flink"],
+        "summary": "Gracefully stop a running deployment",
+        "description": "Suspends the job after taking a savepoint (upgradeMode `savepoint`). Only valid for application-mode deployments currently in `running` status, and when no other action is already pending. The response returns immediately with `pendingAction: \"stop\"` set; poll GET .../{deploymentName} until the status resolves to `suspended`.",
+        "operationId": "stopDeployment",
+        "responses": {
+          "200": {
+            "description": "Stop accepted. Deployment transitions asynchronously",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Deployment is session-mode (stop is only supported for application mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment is not currently running, or another action is already pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}/force-stop": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "post": {
+        "tags": ["Flink"],
+        "summary": "Force stop a running deployment",
+        "description": "Suspends the job immediately without taking a savepoint (upgradeMode `stateless`). Use only when a clean stop is not possible or state can be discarded. Same preconditions as the graceful stop endpoint.",
+        "operationId": "forceStopDeployment",
+        "responses": {
+          "200": {
+            "description": "Force stop accepted. Deployment transitions asynchronously",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Deployment is session-mode (force stop is only supported for application mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment is not currently running, or another action is already pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}/resume": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "post": {
+        "tags": ["Flink"],
+        "summary": "Resume a suspended, failed, or unknown-state deployment",
+        "description": "Only valid when the deployment is `suspended`, `failed`, or `unknown`, and no other action is already pending. Response returns immediately with `pendingAction: \"resume\"` set; poll GET .../{deploymentName} until status resolves to `running`.",
+        "operationId": "resumeDeployment",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resume accepted. Deployment transitions asynchronously",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Deployment is session mode, or both savepointId and skipSavepoint were provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment not found, or savepointId does not belong to this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment is not suspended/failed/unknown, or another action is already pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}/savepoint": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "post": {
+        "tags": ["Flink"],
+        "summary": "Trigger a manual savepoint",
+        "description": "Only valid for a `running` application mode deployment. This call blocks (polling internally, up to 120s) until the savepoint completes, fails, or times out.",
+        "operationId": "triggerSavepoint",
+        "responses": {
+          "200": {
+            "description": "Savepoint completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavepointTriggerResponse"
+                }
+              }  
+            }
+          },
+          "400": {
+            "description": "Deployment is session mode or not currently running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Savepoint failed or timed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flink/deployments/{deploymentName}/savepoints": {
+      "parameters": [
+        {
+          "name": "deploymentName",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "description": "Deployment name (DNS subdomain style)"
+        }
+      ],
+      "get": {
+        "tags": ["Flink"],
+        "summary": "List recorded savepoints for a deployment",
+        "operationId": "listSavepoints",
+        "responses": {
+          "200": {
+            "description": "Savepoints (newest first)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavepointListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jars/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "description": "JAR record ID"
+        }
+      ],
+      "delete": {
+        "tags": ["JAR"],
+        "summary": "Delete a JAR",
+        "description": "Removes the JAR from MinIO and its database record. Rejected if any non-deleted/non-failed deployment still references it.",
+        "operationId": "deleteJar",
+        "responses": {
+          "204": {
+            "description": "JAR deleted"
+          },
+          "400": {
+            "description": "Invalid id (must be a positive integer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "JAR not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "JAR is still referenced by one or more active deployments",
             "content": {
               "application/json": {
                 "schema": {
@@ -871,13 +1287,35 @@
       "Jar": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string", "description": "Original filename" },
-          "objectName": { "type": "string", "description": "UUID-prefixed name used as the MinIO object key" },
-          "sizeBytes": { "type": "integer", "format": "int64", "description": "File size in bytes" },
-          "uploadedBy": { "type": "integer", "nullable": true, "description": "ID of the user who uploaded the JAR" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "url": { "type": "string", "description": "Direct or presigned URL to download the JAR from MinIO" }
+          "id": { 
+            "type": "integer" 
+          },
+          "name": { 
+            "type": "string", 
+            "description": "Original filename" 
+          },
+          "objectName": { 
+            "type": "string", 
+            "description": "UUID-prefixed name used as the MinIO object key" 
+          },
+          "sizeBytes": { 
+            "type": "integer", 
+            "format": "int64", 
+            "description": "File size in bytes" 
+          },
+          "uploadedBy": { 
+            "type": "integer", 
+            "nullable": true, 
+            "description": "ID of the user who uploaded the JAR" 
+          },
+          "createdAt": { 
+            "type": "string", 
+            "format": "date-time" 
+          },
+          "url": { 
+            "type": "string", 
+            "description": "Direct or presigned URL to download the JAR from MinIO" 
+          }
         }
       },
       "JarListResponse": {
@@ -886,9 +1324,13 @@
         "properties": {
           "jars": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Jar" }
+            "items": { 
+              "$ref": "#/components/schemas/Jar" 
+            }
           },
-          "total": { "type": "integer" }
+          "total": { 
+            "type": "integer" 
+          }
         }
       },
       "DeploymentListResponse": {
@@ -908,7 +1350,82 @@
             "type": "integer"
           }
         }
+      },
+      "ResumeRequest": {
+        "type": "object",
+        "description": "At most one of savepointId or skipSavepoint may be set. With neither set, the deployment resumes from its most recent savepoint.",
+        "properties": {
+          "savepointId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "ID of a previously recorded savepoint (see GET .../savepoints) to resume from"
+          },
+          "skipSavepoint": {
+            "type": "boolean",
+            "default": false,
+            "description": "Resume without restoring any state (stateless restart)"
+          }
+        }
+      },
+      "SavepointTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "savepointPath": {
+            "type": "string",
+            "description": "Path of the completed savepoint in the state backend"
+          }
+        }
+      },
+      "Savepoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "stop"
+            ],
+            "description": "How the savepoint was created: A manually triggered savepoint, or the automatic one taken on a graceful stop"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SavepointListResponse": {
+        "type": "object",
+        "properties": {
+          "savepoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Savepoint"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT returned from POST /api/auth/login, sent as `Authorization: Bearer <token>`"
       }
     }
-  }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }
