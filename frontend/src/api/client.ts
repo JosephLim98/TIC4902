@@ -12,6 +12,15 @@ const client = axios.create({
   },
 });
 
+// Attach the JWT to every outgoing request. Flink/Jar routes require a valid token on the server side
+client.interceptors.request.use(config => {
+  const token = localStorage.getItem('jwtToken') || sessionStorage.getItem('jwtToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Translate all API errors into clean and human-readable messages
 // This runs once here so every API call across the app benefits automatically
 client.interceptors.response.use(

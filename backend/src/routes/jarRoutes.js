@@ -1,8 +1,12 @@
 import express from 'express';
 import multer from 'multer';
+import authMiddleware from '../middleware/auth.js';
 import * as jarController from '../controller/jarController.js';
 
 const router = express.Router();
+
+// JAR upload/delete affect what can be deployed and consume storage, so these require an authenticated user (uploadJar also relies on req.user to record who uploaded a given JAR)
+router.use(authMiddleware);
 
 const upload = multer({
   storage: multer.memoryStorage(),

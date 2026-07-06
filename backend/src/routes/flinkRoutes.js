@@ -2,8 +2,12 @@ import express from 'express';
 const router = express.Router();
 import * as flinkController from '../controller/flinkController.js'
 import validateRequest from '../middleware/validateRequest.js';
+import authMiddleware from '../middleware/auth.js';
 import { createDeploymentSchema, updateDeploymentSchema } from '../validators/flinkValidator.js'
 
+// All Flink deployment routes require a valid JWT. 
+// These endpoints can create, stop, resume or delete live infrastructure, so they must never be reachable unauthenticated
+router.use(authMiddleware);
 
 router.get('/deployments', flinkController.listDeployments);
 router.get('/deployments/:deploymentName', flinkController.getDeployment);
