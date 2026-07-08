@@ -3,11 +3,13 @@ import { listDeployments } from '@/api/flink'
 import type { Deployment } from '@/types'
 import DeploymentTable from '@/components/DeploymentTable'
 import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal.js'
+import DeploymentDiagnosticsModal from '@/components/DeploymentDiagnosticsModal'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MaterialIcon } from '@/components/MaterialIcon'
 import { DEPLOYMENT_STATUS, type DeploymentStatus } from '@/utils/constants';
 import type { ApiError } from '@/api/client'
+
 
 type FilterType = DeploymentStatus | 'all'
 
@@ -18,6 +20,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
   const [modalOpen, setModalOpen] = useState(false)
+  const [diagnosticsTarget, setDiagnosticsTarget] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [editDeployment, setEditDeployment] = useState<Deployment | null>(null)
   const itemsPerPage = 15
@@ -233,7 +236,10 @@ export default function DashboardPage() {
             onEdit={(d) => {
               setEditDeployment(d);
               setModalOpen(true);
-            }} 
+            }}
+            onDiagnostics={(d) => {
+              setDiagnosticsTarget(d.deploymentName);
+            }}
             onDeleted={() => refreshDeploymentsSilent()} />
             {/* onDeleted={() => fetchDeployments()} /> */}
           
@@ -267,11 +273,19 @@ export default function DashboardPage() {
           setModalOpen(false);
           setEditDeployment(null);
         }}
-        onCreated={() => {
+        onCreated={(deployment) => {
           fetchDeployments();
+          if (deployment && !editDeployment) {
+            setDiagnosticsTarget(deployment.deploymentName);
+          }
           setEditDeployment(null);
         }}
         initialData={editDeployment}
+      />
+      <DeploymentDiagnosticsModal
+        isOpen={!!diagnosticsTarget}
+        deploymentName={diagnosticsTarget}
+        onClose={() => setDiagnosticsTarget(null)}
       />
     </div>
   )

@@ -12,7 +12,7 @@ import { formatBytes } from '@/lib/utils'
 interface Props {
   isOpen: boolean
   onClose: () => void
-  onCreated: () => void
+  onCreated: (deployment?: Deployment) => void
   initialData?: Deployment | null
 }
 
@@ -218,6 +218,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
     setServerError(null);
 
     try {
+      let createdOrUpdated: Deployment | undefined;
       if (initialData) {
         // Edit mode — immutable fields (namespace, flinkVersion, serviceAccount, deploymentName, deploymentMode, jar) excluded
         const cfg: UpdateDeploymentPayload['config'] = {}
@@ -241,7 +242,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
         if (Object.keys(cfg).length) { payload.config = cfg }
 
         console.log('Updating deployment with payload: ', payload)
-        await updateDeployment(initialData.deploymentName, payload)
+        createdOrUpdated = await updateDeployment(initialData.deploymentName, payload)
       } else {
         let finalJarId = selectedJarId
         if (form.mode === FLINK_MODE.APPLICATION && uploadFile) {
@@ -253,9 +254,9 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
             setUploadProgress(null)
           }
         }
-        await createDeployment(buildPayload(form, finalJarId))
+        createdOrUpdated = await createDeployment(buildPayload(form, finalJarId))
       }
-      onCreated()
+      onCreated(createdOrUpdated)
       onClose()
     } catch (err) {
       const apiErr = err as ApiError

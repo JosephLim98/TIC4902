@@ -161,3 +161,17 @@ export async function forceStopDeployment(req, res, next) {
         next(error);
     }
 }
+
+export async function getDeploymentDiagnostics(req, res, next) {
+    try {
+      const { deploymentName } = req.params;
+  
+      logger.info('Received deployment diagnostics request', { deploymentName });
+  
+      const diagnostics = await flinkService.getDeploymentDiagnostics(deploymentName);
+  
+      res.status(200).json(diagnostics);
+    } catch (error) {
+      next(error);
+    }
+  }

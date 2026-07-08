@@ -690,3 +690,16 @@ export async function resumeDeployment(deploymentName, { savepointId, skipSavepo
   logger.info(`Resume requested for deployment ${deploymentName}`, { deploymentName, savepointId: savepointId ?? null, skipSavepoint });
   return deployment.toJSON();
 }
+
+export async function getDeploymentDiagnostics(deploymentName) {
+  const deployment = await Deployment.findOne({ where: { deploymentName } });
+
+  if (!deployment) {
+    throw new NotFoundError(`Deployment '${deploymentName}' not found`, deploymentName);
+  }
+
+  return await k8sService.getDeploymentDiagnostics(
+    deployment.deploymentName,
+    deployment.namespace
+  );
+}

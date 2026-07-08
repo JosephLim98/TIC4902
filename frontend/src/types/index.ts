@@ -69,3 +69,51 @@ export interface ListSavepointsResponse {
   savepoints: Savepoint[];
   total: number;
 }
+
+export interface DeploymentDiagnostics {
+  deploymentName: string;
+  namespace: string;
+  status: {
+    lifecycleState: string | null;
+    jobManagerDeploymentStatus: string | null;
+    jobStatus: Record<string, unknown> | null;
+    error: unknown | null;
+  };
+  conditions: Array<{
+    type: string | null;
+    status: string | null;
+    reason: string | null;
+    message: string | null;
+    lastTransitionTime: string | null;
+  }>;
+  pods: Array<{
+    name: string | null;
+    phase: string | null;
+    node: string | null;
+    reason: string | null;
+    startTime: string | null;
+    restartCount: number;
+    containers: Array<{
+      name: string;
+      ready: boolean;
+      restartCount: number;
+      state: Record<string, unknown> | null;
+      lastState: Record<string, unknown> | null;
+    }>;
+  }>;
+  events: Array<{
+    reason: string | null;
+    message: string | null;
+    type: string | null;
+    objectKind: string | null;
+    objectName: string | null;
+    firstSeen: string | null;
+    lastSeen: string | null;
+    count: number;
+  }>;
+  recommendations: Array<{
+    severity: 'low' | 'medium' | 'high';
+    reason: string;
+    message: string;
+  }>;
+}

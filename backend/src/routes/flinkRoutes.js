@@ -28,6 +28,7 @@ router.post('/deployments/:deploymentName/stop', flinkController.stopDeployment)
 router.post('/deployments/:deploymentName/force-stop', flinkController.forceStopDeployment);
 router.post('/deployments/:deploymentName/savepoint', flinkController.triggerSavepoint);
 router.get('/deployments/:deploymentName/savepoints', flinkController.listSavepoints);
+router.get('/deployments/:deploymentName/diagnostics', flinkController.getDeploymentDiagnostics);
 
 router.get('/deployments/:deploymentName/logs', logController.streamDeploymentLogs);
 

@@ -1,5 +1,5 @@
 import client from './client';
-import type { Deployment, ListDeploymentsResponse, ListSavepointsResponse } from '../types';
+import type { Deployment, DeploymentDiagnostics, ListDeploymentsResponse, ListSavepointsResponse } from '../types';
 
 const DEPLOYMENTS_ENDPOINT = '/flink/deployments';
 
@@ -10,6 +10,11 @@ export async function listDeployments(signal?: AbortSignal): Promise<ListDeploym
 
 export async function getDeployment(name: string, signal?: AbortSignal): Promise<Deployment> {
   const { data } = await client.get<Deployment>(`${DEPLOYMENTS_ENDPOINT}/${name}`, { signal });
+  return data;
+}
+
+export async function getDeploymentDiagnostics( name: string,signal?: AbortSignal): Promise<DeploymentDiagnostics> {
+  const { data } = await client.get<DeploymentDiagnostics>(`${DEPLOYMENTS_ENDPOINT}/${name}/diagnostics`,{ signal });
   return data;
 }
 

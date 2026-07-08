@@ -1,7 +1,7 @@
 import { KubernetesError } from "../utils/errors.js";
 import { FLINK_CRD, FLINK_MODE } from "../utils/constants.js";
 import { generateFlinkDeployment } from "../template/flinkDeploymentCrd.js";
-import { k8sCustomApi } from "../config/kubernetes.js";
+import { k8sCustomApi, k8sApi } from "../config/kubernetes.js";
 import logger from "../utils/logger.js";
 
 
@@ -25,6 +25,163 @@ export async function getFlinkDeploymentStatus(deploymentName, namespace) {
         logger.warn('Could not fetch K8s status', { deploymentName, namespace, error: error.message });
         return null;
     }
+}
+
+export async function getDeploymentDiagnostics(deploymentName, namespace) {
+    try {
+        const deployment = await getRawFlinkDeployment(deploymentName, namespace);
+
+        const status = extractDiagnosticStatus(deployment);
+        const conditions = fetchConditions(deployment);
+        const pods = await fetchPods(deploymentName, namespace);
+        const events = await fetchEvents(deploymentName, namespace);
+        const recommendations = generateRecommendations({ status, pods, events });
+
+        return {
+            deploymentName,
+            namespace,
+            status,
+            conditions,
+            pods,
+            events,
+            recommendations
+        };
+    } catch (error) {
+        const errorMsg = error.body?.message || error.message;
+        logger.error('Failed to get deployment diagnostics', { deploymentName, namespace, error: errorMsg });
+        throw new KubernetesError(`Failed to get deployment diagnostics: ${errorMsg}`, error);
+    }
+}
+
+function extractDiagnosticStatus(deployment) {
+    return {
+        lifecycleState: deployment.status?.lifecycleState || null,
+        jobManagerDeploymentStatus: deployment.status?.jobManagerDeploymentStatus || null,
+        jobStatus: deployment.status?.jobStatus || null,
+        error: deployment.status?.error || null,
+    };
+}
+
+function fetchConditions(deployment) {
+    return (deployment.status?.conditions || []).map(condition => ({
+        type: condition.type || null,
+        status: condition.status || null,
+        reason: condition.reason || null,
+        message: condition.message || null,
+        lastTransitionTime: condition.lastTransitionTime || null,
+    }));
+}
+
+async function fetchPods(deploymentName, namespace) {
+    const response = await k8sApi.listNamespacedPod({
+        namespace,
+        labelSelector: `app=${deploymentName}`
+    });
+
+    return (response.items || []).map(pod => {
+        const containerStatuses = pod.status?.containerStatuses || [];
+
+        return {
+            name: pod.metadata?.name || null,
+            phase: pod.status?.phase || null,
+            node: pod.spec?.nodeName || null,
+            reason: pod.status?.reason || null,
+            startTime: pod.status?.startTime || null,
+            restartCount: containerStatuses.reduce((sum, container) => {
+                return sum + (container.restartCount || 0);
+            }, 0),
+            containers: containerStatuses.map(container => ({
+                name: container.name,
+                ready: container.ready,
+                restartCount: container.restartCount || 0,
+                state: container.state || null,
+                lastState: container.lastState || null,
+            })),
+        };
+    });
+}
+
+async function fetchEvents(deploymentName, namespace) {
+    const response = await k8sApi.listNamespacedEvent({
+        namespace
+    });
+
+    return (response.items || [])
+        .filter(event =>
+            event.involvedObject?.name?.includes(deploymentName) ||
+            event.message?.includes(deploymentName)
+        )
+        .filter(event =>
+            !(event.reason === 'Unhealthy' && event.message?.includes('Startup probe failed'))
+        )
+        .map(event => ({
+            reason: event.reason || null,
+            message: event.message || null,
+            type: event.type || null,
+            objectKind: event.involvedObject?.kind || null,
+            objectName: event.involvedObject?.name || null,
+            firstSeen: event.firstTimestamp || event.eventTime || null,
+            lastSeen: event.lastTimestamp || event.eventTime || null,
+            count: event.count || 1,
+        }))
+        //sort by newest last seen
+        .sort((a, b) => {
+            const bTime = Date.parse(b.lastSeen || b.firstSeen || 0);
+            const aTime = Date.parse(a.lastSeen || a.firstSeen || 0);
+            return bTime - aTime;
+        });
+}
+
+function generateRecommendations({ status, pods, events }) {
+    const recommendations = [];
+
+    const text = JSON.stringify({ status, pods, events });
+    const allPodsReady = pods.length > 0 && pods.every(pod =>
+        pod.phase === 'Running' &&
+        pod.containers.every(container => container.ready)
+    );
+
+    if (text.includes('ImagePullBackOff') || text.includes('ErrImagePull')) {
+        recommendations.push({
+            severity: 'high',
+            reason: 'Image pull failed',
+            message: 'Kubernetes could not pull the Flink image. Verify the image name or run the image loading script for your local cluster.'
+        });
+    }
+
+    if (text.includes('CrashLoopBackOff')) {
+        recommendations.push({
+            severity: 'high',
+            reason: 'Container is crashing repeatedly',
+            message: 'Check the JobManager logs. The application may be failing during startup.'
+        });
+    }
+
+    if (text.includes('OOMKilled')) {
+        recommendations.push({
+            severity: 'high',
+            reason: 'Container ran out of memory',
+            message: 'Increase JobManager or TaskManager memory in the deployment configuration.'
+        });
+    }
+
+    if (text.includes('FailedScheduling')) {
+        recommendations.push({
+            severity: 'medium',
+            reason: 'Pod scheduling failed',
+            message: 'The Kubernetes cluster may not have enough CPU or memory available.'
+        });
+    }
+    
+    if (recommendations.length === 0 && allPodsReady && status.lifecycleState === 'STABLE') {
+        recommendations.push({
+            severity: 'low',
+            reason: 'Deployment looks healthy',
+            message: 'No Kubernetes issues were detected for this deployment.'
+        });
+    }
+
+    return recommendations;
 }
 
 export async function deleteFlinkDeployment(deploymentName, namespace) {
@@ -358,3 +515,5 @@ export async function resumeWithoutSavepoint(deploymentName, namespace) {
         throw new KubernetesError(`Failed to resume without savepoint: ${errorMsg}`);
     }
 }
+
+

@@ -24,10 +24,11 @@ import { ResumeDeploymentDialog } from './ResumePipelineModal'
 interface Props {
   deployments: Deployment[]
   onEdit?: (deployment: Deployment) => void
+  onDiagnostics?: (deployment: Deployment) => void
   onDeleted?: () => void
 }
 
-export default function DeploymentTable({ deployments, onEdit, onDeleted }: Props) {
+export default function DeploymentTable({ deployments, onEdit, onDeleted, onDiagnostics}: Props) {
   const navigate = useNavigate()
 
   const [confirmDelete, setConfirmDelete] = useState<Deployment | null>(null)
@@ -191,6 +192,17 @@ export default function DeploymentTable({ deployments, onEdit, onDeleted }: Prop
                       )}
 
                       <div className="flex-1" />
+
+                      {/* Diagnostics */}
+                      {!isTerminal && (
+                        <button
+                          onClick={() => onDiagnostics?.(d)}
+                          title="View diagnostics"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                        >
+                          <MaterialIcon name="monitor_heart" size={18} />
+                        </button>
+                      )}
 
                       {/* Edit (only when settled into suspended/failed) */}
                       {canEdit && (
