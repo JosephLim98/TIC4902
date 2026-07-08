@@ -10,8 +10,11 @@ fi
 
 echo "Applying Flink resources."
 kubectl apply -f k8s/flink-configuration-configmap.yaml
+kubectl apply -f k8s/flink-log4j-configmap.yaml
 kubectl apply -f k8s/jobmanager-deployment.yaml
 kubectl apply -f k8s/jobmanager-service.yaml
+kubectl apply -f k8s/minio.yaml
+kubectl apply -f k8s/promtail.yaml
 kubectl apply -f k8s/taskmanager-deployment.yaml
 kubectl apply -f k8s/sql-client-pod.yaml
 

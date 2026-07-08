@@ -16,6 +16,7 @@ import { DeleteDeploymentDialog } from '@/components/DeletePipelineModal'
 import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal'
 import { ForceStopDeploymentDialog } from '@/components/ForceStopPipelineModal'
 import { ResumeDeploymentDialog } from '@/components/ResumePipelineModal'
+import LogViewer from '@/components/LogViewer'
 
 interface InfoItemProps {
   label: string
@@ -369,6 +370,8 @@ export default function DeploymentDetailPage() {
               <InfoItem label="Replicas" value={deployment.config?.taskManager?.replicas} />
               <InfoItem label="Task Slots" value={deployment.config?.taskManager?.taskSlots} />
             </Section>
+
+            <LogViewer deploymentName={deployment.deploymentName} />
 
             {deployment.flinkDeployment && (
               <Section title="Kubernetes">

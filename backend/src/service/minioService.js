@@ -10,6 +10,7 @@ const minioClient = new Minio.Client({
 });
 
 const BUCKET      = process.env.MINIO_BUCKET      || 'flink-jars';
+const LOG_BUCKET  = process.env.LOG_BUCKET        || 'flink-logs';
 const PUBLIC_HOST = process.env.MINIO_PUBLIC_HOST || 'minio.default.svc.cluster.local';
 const PUBLIC_PORT = process.env.MINIO_PORT        || '9000';
 
@@ -35,6 +36,16 @@ export async function ensureBucketExists() {
   });
   await minioClient.setBucketPolicy(BUCKET, policy);
   logger.info('Created MinIO bucket with public-read policy', { bucket: BUCKET });
+}
+
+export async function ensureLogBucketExists() {
+  const exists = await minioClient.bucketExists(LOG_BUCKET);
+  if (exists) {
+    logger.info('Log bucket already exists', { bucket: LOG_BUCKET });
+    return;
+  }
+  await minioClient.makeBucket(LOG_BUCKET, 'us-east-1');
+  logger.info('Created log bucket', { bucket: LOG_BUCKET });
 }
 
 export async function uploadJar(objectName, buffer, size) {

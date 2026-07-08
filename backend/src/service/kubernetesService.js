@@ -54,7 +54,7 @@ export async function createFlinkCluster(deploymentName, namespace, config, jarS
         const mode = jarSpec ? FLINK_MODE.APPLICATION : FLINK_MODE.SESSION
         logger.info('Creating FlinkDeployment CRD', {deploymentName, namespace, mode});
 
-        const flinkDeployment = generateFlinkDeployment(deploymentName, namespace, config, jarSpec, environmentVariables, stateBucketName);
+        const flinkDeployment = await generateFlinkDeployment(deploymentName, namespace, config, jarSpec, environmentVariables, stateBucketName);
         const response = await k8sCustomApi.createNamespacedCustomObject({
             group: FLINK_CRD.GROUP,
             version: FLINK_CRD.VERSION,
