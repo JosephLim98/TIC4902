@@ -9,7 +9,7 @@ import type { ApiError } from '@/api/client';
 interface DeleteProps {
     deployment: Deployment | null;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (deployment?: Deployment) => void;
 }
 
 export function DeleteDeploymentDialog({ deployment, onClose, onSuccess }: DeleteProps) {
@@ -31,8 +31,8 @@ export function DeleteDeploymentDialog({ deployment, onClose, onSuccess }: Delet
         setError(null);
         
         try {
-            await deleteDeployment(deployment.deploymentName);
-            onSuccess();
+            const deleted = await deleteDeployment(deployment.deploymentName);
+            onSuccess(deleted);
             onClose();
         } catch (err) {
             setError((err as ApiError).message ?? "Failed to delete deployment. Please try again.");

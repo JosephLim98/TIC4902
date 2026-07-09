@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { listDeployments } from '@/api/flink'
 import type { Deployment } from '@/types'
 import DeploymentTable from '@/components/DeploymentTable'
@@ -23,7 +24,10 @@ export default function DashboardPage() {
   const [diagnosticsTarget, setDiagnosticsTarget] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [editDeployment, setEditDeployment] = useState<Deployment | null>(null)
+  const location = useLocation()
+  const navigate = useNavigate()
   const itemsPerPage = 15
+
 
   async function fetchDeployments(signal?: AbortSignal) {
     setLoading(true)
@@ -54,8 +58,24 @@ export default function DashboardPage() {
   useEffect(() => {
     const controller = new AbortController()
     fetchDeployments(controller.signal)
+  
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    const state = location.state as { diagnosticsDeploymentName?: string } | null
+  
+    if (!state?.diagnosticsDeploymentName) {
+      return
+    }
+  
+    setDiagnosticsTarget(state.diagnosticsDeploymentName)
+  
+    navigate('.', {
+      replace: true,
+      state: null,
+    })
+  }, [location.state, navigate])
 
   const TRANSITIONING_STATUSES: DeploymentStatus[] = [
     DEPLOYMENT_STATUS.CREATING,

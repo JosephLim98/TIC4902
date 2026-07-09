@@ -246,7 +246,13 @@ export default function DeploymentTable({ deployments, onEdit, onDeleted, onDiag
       <DeleteDeploymentDialog
         deployment={confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        onSuccess={() => onDeleted?.()}
+        onSuccess={(deployment) => {
+          setConfirmDelete(null);
+          onDeleted?.();
+          if (deployment) {
+            onDiagnostics?.(deployment);
+          }
+        }}
       />
 
       <ResumeDeploymentDialog 

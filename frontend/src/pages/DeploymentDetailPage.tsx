@@ -444,7 +444,13 @@ export default function DeploymentDetailPage() {
       <DeleteDeploymentDialog
         deployment={showDeleteModal ? deployment : null}
         onClose={() => setShowDeleteModal(false)}
-        onSuccess={() => navigate('/')}
+        onSuccess={(deleted) => {
+          navigate('/', {
+            state: {
+              diagnosticsDeploymentName: deleted?.deploymentName ?? deployment?.deploymentName,
+            },
+          })
+        }}
       />
 
       <ForceStopDeploymentDialog 

@@ -29,14 +29,32 @@ export async function getFlinkDeploymentStatus(deploymentName, namespace) {
 
 export async function getDeploymentDiagnostics(deploymentName, namespace) {
     try {
-        const deployment = await getRawFlinkDeployment(deploymentName, namespace);
+        let deployment = null;
 
-        const status = extractDiagnosticStatus(deployment);
-        const conditions = fetchConditions(deployment);
+        try {
+            deployment = await getRawFlinkDeployment(deploymentName, namespace);
+        } catch (error) {
+            if (isNotFoundError(error)) {
+                logger.info('FlinkDeployment CRD not found while collecting diagnostics', {
+                    deploymentName,
+                    namespace,
+                });
+            } else {
+                throw error;
+            }
+        }
+
+        const status = deployment ? extractDiagnosticStatus(deployment): {
+                lifecycleState: 'DELETED',
+                jobManagerDeploymentStatus: null,
+                jobStatus: null,
+                error: null,
+        };
+
+        const conditions = deployment ? fetchConditions(deployment) : [];
         const pods = await fetchPods(deploymentName, namespace);
         const events = await fetchEvents(deploymentName, namespace);
-        const recommendations = generateRecommendations({ status, pods, events });
-
+        const recommendations = deployment ? generateRecommendations({ status, pods, events }): [];
         return {
             deploymentName,
             namespace,
@@ -132,14 +150,19 @@ async function fetchEvents(deploymentName, namespace) {
         });
 }
 
+function isNotFoundError(error) {
+    return (
+        error?.statusCode === 404 ||
+        error?.response?.statusCode === 404 ||
+        error?.body?.code === 404 ||
+        error?.message?.includes('HTTP-Code: 404') ||
+        error?.message?.includes('Not Found')
+    );
+}
+
 function generateRecommendations({ status, pods, events }) {
     const recommendations = [];
-
     const text = JSON.stringify({ status, pods, events });
-    const allPodsReady = pods.length > 0 && pods.every(pod =>
-        pod.phase === 'Running' &&
-        pod.containers.every(container => container.ready)
-    );
 
     if (text.includes('ImagePullBackOff') || text.includes('ErrImagePull')) {
         recommendations.push({
@@ -170,14 +193,6 @@ function generateRecommendations({ status, pods, events }) {
             severity: 'medium',
             reason: 'Pod scheduling failed',
             message: 'The Kubernetes cluster may not have enough CPU or memory available.'
-        });
-    }
-    
-    if (recommendations.length === 0 && allPodsReady && status.lifecycleState === 'STABLE') {
-        recommendations.push({
-            severity: 'low',
-            reason: 'Deployment looks healthy',
-            message: 'No Kubernetes issues were detected for this deployment.'
         });
     }
 

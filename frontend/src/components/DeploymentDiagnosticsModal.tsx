@@ -54,28 +54,45 @@ export default function DeploymentDiagnosticsModal({
   useEffect(() => {
     if (!isOpen || !deploymentName) return
 
+    const activeDeploymentName = deploymentName
     const controller = new AbortController()
+    let cancelled = false
+    
+    async function fetchDiagnostics(isInitial = false) {
+        if (isInitial) {
+          setDiagnostics(null)
+          setError(null)
+          setLoading(true)
+        }
+    
+        try {
+            const result = await getDeploymentDiagnostics(activeDeploymentName, controller.signal)
 
-    setDiagnostics(null)
-    setError(null)
-    setLoading(true)
-
-    const timer = window.setTimeout(() => {
-      getDeploymentDiagnostics(deploymentName, controller.signal)
-        .then(setDiagnostics)
-        .catch((err: ApiError) => {
-          if (controller.signal.aborted) return
-          setError(err.message || 'Unable to load diagnostics')
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) {
+            if (!cancelled) {
+                setDiagnostics(result)
+                setError(null)
+            }
+        } catch (err) {
+          if (controller.signal.aborted || cancelled) return
+    
+          const apiErr = err as ApiError
+          setError(apiErr.message || 'Unable to load diagnostics')
+        } finally {
+          if (!controller.signal.aborted && !cancelled) {
             setLoading(false)
           }
-        })
-    }, 3000)
+        }
+    }
+
+    fetchDiagnostics(true)
+
+    const interval = window.setInterval(() => {
+        fetchDiagnostics(false)
+    }, 4000)
 
     return () => {
-      window.clearTimeout(timer)
+      cancelled = true
+      window.clearInterval(interval)
       controller.abort()
     }
   }, [isOpen, deploymentName])
@@ -363,20 +380,6 @@ function InfoTile({label,value,tone = 'neutral'}: {label: string;value: string;t
       </div>
     )
   }
-
-
-// function InfoTile({ label, value }: { label: string; value: string }) {
-//   return (
-//     <div className="rounded-md border border-zinc-200 px-4 py-3">
-//       <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-//         {label}
-//       </p>
-//       <p className="mt-1 break-words text-sm font-medium text-zinc-800">
-//         {value}
-//       </p>
-//     </div>
-//   )
-// }
 
 function EmptyState({ text }: { text: string }) {
   return (
