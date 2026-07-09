@@ -4,12 +4,14 @@ const mockSuspend = jest.fn();
 const mockResume = jest.fn();
 const mockDelete = jest.fn();
 const mockGetStatus = jest.fn();
+const mockGetDiagnostics = jest.fn();
 
 jest.unstable_mockModule('../src/service/kubernetesService.js', () => ({
     suspendFlinkDeployment: mockSuspend,
     resumeFlinkDeployment: mockResume,
     deleteFlinkDeployment: mockDelete,
     getFlinkDeploymentStatus: mockGetStatus,
+    getDeploymentDiagnostics: mockGetDiagnostics,
     createFlinkCluster: jest.fn(),
     patchFlinkDeployment: jest.fn(),
     triggerSavepoint: jest.fn(),
@@ -46,7 +48,7 @@ jest.unstable_mockModule('../src/service/minioService.js', () => ({
 }));
 
 const { deleteStateBucket } = await import('../src/service/minioService.js');
-const { stopDeployment, deleteDeployment, getDeployment } = await import('../src/service/flinkService.js');
+const { stopDeployment, deleteDeployment, getDeployment, getDeploymentDiagnostics } = await import('../src/service/flinkService.js');
 
 // Minimal Sequelize model instance that mutates in place
 function fakeDeployment(overrides = {}) {
@@ -309,5 +311,47 @@ describe('flinkService getDeployment (syncDeployment reconciliation)', () => {
 
         expect(deployment.status).toBe('running');
         expect(result.status).toBe('running');
+    });
+});
+
+describe('flinkService getDeploymentDiagnostics', () => {
+    it('throws NotFoundError when the deployment does not exist', async () => {
+        mockFindOne.mockResolvedValueOnce(null);
+
+        await expect(getDeploymentDiagnostics('missing')).rejects.toMatchObject({
+            name: 'NotFoundError',
+        });
+
+        expect(mockGetDiagnostics).not.toHaveBeenCalled();
+    });
+
+    it('delegates to kubernetesService with the deployment namespace', async () => {
+        const deployment = fakeDeployment({
+            deploymentName: 'my-job',
+            namespace: 'custom-namespace',
+        });
+
+        const diagnostics = {
+            deploymentName: 'my-job',
+            namespace: 'custom-namespace',
+            status: {
+                lifecycleState: 'STABLE',
+                jobManagerDeploymentStatus: 'READY',
+                jobStatus: {},
+                error: null,
+            },
+            conditions: [],
+            pods: [],
+            events: [],
+            recommendations: [],
+        };
+
+        mockFindOne.mockResolvedValueOnce(deployment);
+        mockGetDiagnostics.mockResolvedValueOnce(diagnostics);
+
+        const result = await getDeploymentDiagnostics('my-job');
+
+        expect(mockGetDiagnostics).toHaveBeenCalledWith('my-job', 'custom-namespace');
+        expect(result).toBe(diagnostics);
     });
 });

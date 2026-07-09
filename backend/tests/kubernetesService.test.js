@@ -5,6 +5,8 @@ const mockDelete = jest.fn();
 const mockCreate = jest.fn();
 const mockPatch = jest.fn();
 const mockList = jest.fn();
+const mockListNamespacedPod = jest.fn();
+const mockListNamespacedEvent = jest.fn();
 
 jest.unstable_mockModule('../src/config/kubernetes.js', () => ({
     k8sCustomApi: {
@@ -13,6 +15,10 @@ jest.unstable_mockModule('../src/config/kubernetes.js', () => ({
         createNamespacedCustomObject: mockCreate,
         patchNamespacedCustomObject: mockPatch,
         listNamespacedCustomObject: mockList,
+    },
+    k8sApi: {
+        listNamespacedPod: mockListNamespacedPod,
+        listNamespacedEvent: mockListNamespacedEvent,
     },
 }));
 
@@ -26,6 +32,8 @@ const k8sService = await import('../src/service/kubernetesService.js');
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockListNamespacedPod.mockResolvedValue({ items: [] });
+    mockListNamespacedEvent.mockResolvedValue({ items: [] });
 });
 
 describe('kubernetesService getFlinkDeploymentStatus', () => {
@@ -65,6 +73,9 @@ describe('kubernetesService getFlinkDeploymentStatus', () => {
         expect(result).toBeNull();
     });
 });
+
+
+
 
 describe('kubernetesService deleteFlinkDeployment', () => {
     it('treats a 404 as already deleted rather than throwing', async () => {
@@ -300,5 +311,104 @@ describe('kubernetesService getSavepointStatus', () => {
         const result = await k8sService.getSavepointStatus('my-job', 'default', Date.now() - 500);
         expect(result.failed).toBe(true);
         expect(result.failureReason).toBe('disk full');
+    });
+});
+
+describe('kubernetesService getDeploymentDiagnostics', () => {
+    it('returns diagnostic status, pods, events, and recommendations', async () => {
+        mockGet.mockResolvedValueOnce({
+            status: {
+                lifecycleState: 'FAILED',
+                jobManagerDeploymentStatus: 'MISSING',
+                jobStatus: { state: 'FAILED' },
+                error: 'job failed',
+                conditions: [
+                    {
+                        type: 'Reconciled',
+                        status: 'False',
+                        reason: 'JobFailed',
+                        message: 'Flink job failed',
+                        lastTransitionTime: '2026-07-10T01:00:00Z',
+                    },
+                ],
+            },
+        });
+
+        mockListNamespacedPod.mockResolvedValueOnce({
+            items: [
+                {
+                    metadata: { name: 'my-job-pod-1' },
+                    spec: { nodeName: 'minikube' },
+                    status: {
+                        phase: 'Running',
+                        containerStatuses: [
+                            {
+                                name: 'flink-main-container',
+                                ready: false,
+                                restartCount: 2,
+                                state: { waiting: { reason: 'CrashLoopBackOff' } },
+                                lastState: {},
+                            },
+                        ],
+                    },
+                },
+            ],
+        });
+
+        mockListNamespacedEvent.mockResolvedValueOnce({
+            items: [
+                {
+                    reason: 'BackOff',
+                    message: 'Back-off restarting failed container: CrashLoopBackOff',
+                    type: 'Warning',
+                    involvedObject: { kind: 'Pod', name: 'my-job-pod-1' },
+                    lastTimestamp: '2026-07-10T01:02:00Z',
+                    count: 3,
+                },
+            ],
+        });
+
+        const result = await k8sService.getDeploymentDiagnostics('my-job', 'default');
+
+        expect(result.status.lifecycleState).toBe('FAILED');
+        expect(result.conditions[0]).toMatchObject({ reason: 'JobFailed' });
+        expect(result.pods[0]).toMatchObject({
+            name: 'my-job-pod-1',
+            phase: 'Running',
+            node: 'minikube',
+            restartCount: 2,
+        });
+        expect(result.events[0]).toMatchObject({
+            reason: 'BackOff',
+            type: 'Warning',
+            objectName: 'my-job-pod-1',
+        });
+        expect(result.recommendations).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    severity: 'high',
+                    reason: 'Container is crashing repeatedly',
+                }),
+            ])
+        );
+    });
+
+    it('returns DELETED diagnostics when the CRD no longer exists', async () => {
+        mockGet.mockRejectedValueOnce(new Error('HTTP-Code: 404 Not Found'));
+
+        const result = await k8sService.getDeploymentDiagnostics('my-job', 'default');
+
+        expect(result).toMatchObject({
+            deploymentName: 'my-job',
+            namespace: 'default',
+            status: {
+                lifecycleState: 'DELETED',
+                jobManagerDeploymentStatus: null,
+                jobStatus: null,
+                error: null,
+            },
+            conditions: [],
+            recommendations: [],
+        });
     });
 });
