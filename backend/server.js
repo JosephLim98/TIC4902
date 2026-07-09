@@ -1,5 +1,5 @@
+import "dotenv/config";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import { initializeDatabase } from "./src/config/database.js";
 import initDatabase from "./src/db/init.js";
@@ -7,8 +7,6 @@ import { mountSwagger } from "./src/docs/serveSwagger.js";
 import errorHandler from "./src/middleware/errorHandler.js";
 import routes from "./src/routes/index.js";
 import { ensureBucketExists, ensureLogBucketExists } from "./src/service/minioService.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
