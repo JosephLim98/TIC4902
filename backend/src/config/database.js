@@ -57,10 +57,10 @@ const sequelize = new Sequelize({
     
     if (count === 0) {
       await FlinkConfig.create({
-        image: 'flink:1.19',
+        image: 'flink:1.19-kafka',
         flinkVersion: 'v1_19',
         serviceAccount: 'flink',
-        namespace: 'default',
+        namespace: 'tic4902',
         jobManagerMemory: '1024m',
         jobManagerCpu: 0.5,
         jobManagerReplicas: 1,
