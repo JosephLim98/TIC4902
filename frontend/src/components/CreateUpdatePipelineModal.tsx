@@ -346,7 +346,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
               <Field label="Namespace">
                 <Input
                   aria-invalid={!!errors.namespace}
-                  placeholder="default"
+                  placeholder="tic4902"
                   value={form.namespace}
                   onChange={e => set('namespace', e.target.value)}
                   onBlur={() => blur('namespace')}
@@ -529,7 +529,7 @@ export default function CreateUpdatePipelineModal({ isOpen, onClose, onCreated, 
                       )}
                     </Field>
                     <Field label="Container Image">
-                      <Input aria-invalid={!!errors.image} placeholder="flink:1.19"
+                      <Input aria-invalid={!!errors.image} placeholder="flink:1.19-kafka"
                         value={form.image} onChange={e => set('image', e.target.value)}
                         onBlur={() => blur('image')} spellCheck={false} />
                     </Field>

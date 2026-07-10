@@ -20,7 +20,7 @@ const Deployment = sequelize.define('Deployment', {
       namespace: {
         type: DataTypes.STRING(63), // Kubernetes character limit 
         allowNull: false,
-        defaultValue: 'default',
+        defaultValue: 'tic4902',
         validate: {
             is: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/  
         }
