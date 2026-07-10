@@ -52,7 +52,7 @@ describe("Auth Service Tests", () => {
       const result = generateToken(user);
 
       expect(mockJwt.sign).toHaveBeenCalledWith({ user }, "test-secret", {
-        expiresIn: "1h",
+        expiresIn: "15m",
       });
       expect(result).toBe(mockToken);
     });
