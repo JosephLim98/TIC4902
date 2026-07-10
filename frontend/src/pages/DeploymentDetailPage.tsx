@@ -17,6 +17,8 @@ import CreateUpdatePipelineModal from '@/components/CreateUpdatePipelineModal'
 import { ForceStopDeploymentDialog } from '@/components/ForceStopPipelineModal'
 import { ResumeDeploymentDialog } from '@/components/ResumePipelineModal'
 import LogViewer from '@/components/LogViewer'
+import FlinkDashboardPanel from '@/components/FlinkDashboardPanel'
+import { isFlinkDashboardAvailable } from '@/utils/flinkDashboard'
 
 interface InfoItemProps {
   label: string
@@ -60,6 +62,7 @@ function Section({ title, children }: SectionProps) {
 // pendingAction, nothing will change on its own, so we stop polling.
 const TRANSITIONING_STATUSES: DeploymentStatus[] = [
   DEPLOYMENT_STATUS.CREATING,
+  
   DEPLOYMENT_STATUS.ROLLING_BACK,
   DEPLOYMENT_STATUS.DELETING,
   DEPLOYMENT_STATUS.UNKNOWN,
@@ -78,6 +81,7 @@ export default function DeploymentDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showForceStopModal, setShowForceStopModal] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   // Only used to disable the Stop button the instant it's clicked, before the
   // next refetch comes back with the real pendingAction from the backend.
@@ -217,6 +221,17 @@ export default function DeploymentDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {isFlinkDashboardAvailable(deployment) && !showDashboard && (
+                <Button
+                  variant="outline"
+                  className="px-6 py-3"
+                  onClick={() => setShowDashboard(true)}
+                >
+                  <MaterialIcon name="dashboard" size={18} className="mr-2" />
+                  Flink Dashboard
+                </Button>
+              )}
+
               {deployment.deploymentMode === FLINK_MODE.APPLICATION && (
                 <>
 
@@ -470,6 +485,14 @@ export default function DeploymentDetailPage() {
           refetch()
         }}
       />
+
+      {deployment && (
+        <FlinkDashboardPanel
+          deploymentName={deployment.deploymentName}
+          isOpen={showDashboard && isFlinkDashboardAvailable(deployment)}
+          onClose={() => setShowDashboard(false)}
+        />
+      )}
 
     </div>
   )

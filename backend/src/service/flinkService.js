@@ -7,6 +7,7 @@ import * as k8sService from './kubernetesService.js';
 import { ConflictError, KubernetesError, NotFoundError, ValidationError } from '../utils/errors.js';
 import { getJarById } from './jarService.js';
 import { buildStateBucketName, ensureStateBucketExists, deleteStateBucket } from './minioService.js';
+import { signDashboardToken, buildDashboardProxyPath } from '../utils/dashboardToken.js';
 
 async function getFlinkConfig() {
     const config = await FlinkConfig.findOne({order: [['id', 'ASC']]})
@@ -702,4 +703,25 @@ export async function getDeploymentDiagnostics(deploymentName) {
     deployment.deploymentName,
     deployment.namespace
   );
+}
+
+export function isDashboardAvailable(deployment) {
+  const hasCrd = Array.isArray(deployment.resources) && deployment.resources.length > 0;
+  const jmReady = deployment.kubernetesStatus?.jobManagerDeploymentStatus === 'READY';
+  return hasCrd && jmReady;
+}
+
+export async function getDashboardAccess(deploymentName) {
+  const deployment = await getDeployment(deploymentName);
+
+  if (!isDashboardAvailable(deployment)) {
+    return { available: false, url: null };
+  }
+
+  const token = signDashboardToken(deploymentName, deployment.namespace);
+  return {
+    available: true,
+    url: buildDashboardProxyPath(deploymentName),
+    token,
+  };
 }

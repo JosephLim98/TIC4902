@@ -1,4 +1,10 @@
 import * as flinkService from '../service/flinkService.js'
+import { proxyDashboard as proxyDashboardRequest } from '../service/flinkDashboardProxyService.js'
+import {
+  buildDashboardCookiePath,
+  getDashboardCookieName,
+  getDashboardTokenTtlMs,
+} from '../utils/dashboardToken.js'
 import logger from '../utils/logger.js'
 
 function formatDeploymentResponse(deployment) {
@@ -175,3 +181,48 @@ export async function getDeploymentDiagnostics(req, res, next) {
       next(error);
     }
   }
+
+export async function getDashboardUrl(req, res, next) {
+  try {
+    const { deploymentName } = req.params;
+    logger.info('Received dashboard URL request', { deploymentName });
+
+    const access = await flinkService.getDashboardAccess(deploymentName);
+    if (!access.available) {
+      return res.status(503).json({
+        available: false,
+        url: null,
+        error: 'Flink dashboard is not available yet. Job Manager must be READY.',
+      });
+    }
+
+    res.cookie(getDashboardCookieName(), access.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: getDashboardTokenTtlMs(),
+      path: buildDashboardCookiePath(deploymentName),
+    });
+
+    res.status(200).json({
+      available: access.available,
+      url: access.url,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function proxyDashboard(req, res, next) {
+  try {
+    const { deploymentName } = req.params;
+    const deployment = await flinkService.getDeployment(deploymentName);
+
+    if (!flinkService.isDashboardAvailable(deployment)) {
+      return res.status(503).send('Flink dashboard is not available yet.');
+    }
+
+    proxyDashboardRequest(req, res, deploymentName, deployment.namespace);
+  } catch (error) {
+    next(error);
+  }
+}

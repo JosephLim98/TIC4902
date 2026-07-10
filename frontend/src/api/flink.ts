@@ -3,6 +3,12 @@ import type { Deployment, DeploymentDiagnostics, ListDeploymentsResponse, ListSa
 
 const DEPLOYMENTS_ENDPOINT = '/flink/deployments';
 
+export interface DashboardUrlResponse {
+  available: boolean;
+  url: string | null;
+  error?: string;
+}
+
 export async function listDeployments(signal?: AbortSignal): Promise<ListDeploymentsResponse> {
   const { data } = await client.get<ListDeploymentsResponse>(DEPLOYMENTS_ENDPOINT, { signal });
   return data;
@@ -15,6 +21,14 @@ export async function getDeployment(name: string, signal?: AbortSignal): Promise
 
 export async function getDeploymentDiagnostics( name: string,signal?: AbortSignal): Promise<DeploymentDiagnostics> {
   const { data } = await client.get<DeploymentDiagnostics>(`${DEPLOYMENTS_ENDPOINT}/${name}/diagnostics`,{ signal });
+  return data;
+}
+
+export async function getDashboardUrl(name: string, signal?: AbortSignal): Promise<DashboardUrlResponse> {
+  const { data } = await client.get<DashboardUrlResponse>(`${DEPLOYMENTS_ENDPOINT}/${name}/dashboard-url`, {
+    signal,
+    withCredentials: true,
+  });
   return data;
 }
 
