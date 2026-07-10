@@ -39,6 +39,23 @@
             </manifest>
           </archive>
         </configuration>
+        <executions>
+          <execution>
+            <id>k8s</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>k8s</classifier>
+              <archive>
+                <manifest>
+                  <mainClass>com.tic4902.flinkjobs.KafkaEnrichmentK8sJob</mainClass>
+                </manifest>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
