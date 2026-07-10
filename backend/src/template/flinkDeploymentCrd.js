@@ -41,11 +41,25 @@ async function resolveHostAlias(hostname) {
 
 const LOG4J_CONSOLE_PROPERTIES = `rootLogger.level = INFO
 rootLogger.appenderRef.console.ref = ConsoleAppender
+rootLogger.appenderRef.rolling.ref = RollingFileAppender
 
 appender.console.name = ConsoleAppender
 appender.console.type = CONSOLE
 appender.console.layout.type = PatternLayout
 appender.console.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5level %logger{60} - %msg%n
+
+appender.rolling.name = RollingFileAppender
+appender.rolling.type = RollingFile
+appender.rolling.append = false
+appender.rolling.fileName = \${sys:log.file}
+appender.rolling.filePattern = \${sys:log.file}.%i
+appender.rolling.layout.type = PatternLayout
+appender.rolling.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5level %logger{60} - %msg%n
+appender.rolling.policies.type = Policies
+appender.rolling.policies.size.type = SizeBasedTriggeringPolicy
+appender.rolling.policies.size.size = 100MB
+appender.rolling.strategy.type = DefaultRolloverStrategy
+appender.rolling.strategy.max = 10
 
 logger.akka.name = akka
 logger.akka.level = INFO
@@ -126,6 +140,7 @@ export async function generateFlinkDeployment(deploymentName, namespace, config,
         jarURI: jarSpec.jarUrl,
         state: DEPLOYMENT_STATUS.RUNNING,
         upgradeMode: FLINK_CRD.LAST_STATE_UPGRADE,
+        args: ['_'],
         ...(jarSpec.parallelism && { parallelism: jarSpec.parallelism }),
         ...(jarSpec.mainClass && { entryClass: jarSpec.mainClass })
         };
