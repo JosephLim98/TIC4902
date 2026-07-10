@@ -76,6 +76,7 @@ docs/            Reference guides (API, Kubernetes deployment, debugging)
 
 - [API Reference](docs/api-reference.md): deployment & JAR management endpoints, curl examples
 - [Kubernetes Deployment Guide](docs/kubernetes-deployment.md): Minikube setup, deploying Flink, accessing dashboards
+- [Production Kubernetes Deployment](docs/production-kubernetes-deployment.md): full prod stack on K8s (PostgreSQL, MinIO, Kafka, app services)
 - [Debugging Guide](docs/debugging.md): common errors and fixes
 - [Testing Savepoints](docs/testing-savepoints.md): verifying stop/resume state recovery
 

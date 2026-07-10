@@ -1,0 +1,29 @@
+controllers:
+  main:
+    strategy: Recreate
+    containers:
+      main:
+        image:
+          repository: tic4902-frontend
+          tag: latest
+          pullPolicy: Never
+        probes:
+          liveness:
+            enabled: true
+            type: HTTP
+            path: /
+            port: 80
+            spec:
+              initialDelaySeconds: 5
+          readiness:
+            enabled: true
+            type: HTTP
+            path: /
+            port: 80
+
+service:
+  main:
+    controller: main
+    ports:
+      http:
+        port: 80

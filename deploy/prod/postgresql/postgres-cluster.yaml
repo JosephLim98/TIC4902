@@ -1,0 +1,52 @@
+apiVersion: postgres-operator.crunchydata.com/v1
+kind: PostgresCluster
+metadata:
+  name: postgres-cluster
+  namespace: tic4902
+spec:
+  postgresVersion: 16
+  instances:
+    - name: instance1
+      replicas: 1
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  backups:
+    pgbackrest:
+      global:
+        repo1-retention-full: "14"
+        repo1-retention-full-type: time
+      manual:
+        repoName: repo1
+        options:
+          - --type=full
+      repos:
+        - name: repo1
+          schedules:
+            full: "0 14 * * 0"
+            differential: "0 14 * * 1-6"
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+  patroni:
+    dynamicConfiguration:
+      postgresql:
+        pg_hba:
+          - hostnossl all all 0.0.0.0/0 scram-sha-256
+          - hostnossl all all ::/0 scram-sha-256
+  databaseInitSQL:
+    name: postgres-cluster-init-sql
+    key: init.sql
+  users:
+    - name: postgres
+    - name: nodejs
+      databases:
+        - TIC4902_DB
+      options: "LOGIN"

@@ -1,0 +1,18 @@
+# MinIO Tenant — standalone (1 server, 1 volume) in tic4902
+tenant:
+  name: minio
+  image:
+    repository: quay.io/minio/minio
+    tag: RELEASE.2025-07-23T15-54-02Z
+    pullPolicy: IfNotPresent
+  configSecret:
+    name: minio-env-configuration
+    accessKey: minioadmin
+    secretKey: minioadmin
+  pools:
+    - servers: 1
+      name: pool-0
+      volumesPerServer: 1
+      size: 5Gi
+  certificate:
+    requestAutoCert: false

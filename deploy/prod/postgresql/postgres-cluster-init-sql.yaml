@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-cluster-init-sql
+  namespace: tic4902
+data:
+  init.sql: |
+    \set ON_ERROR_STOP 1
+
+    ALTER DATABASE "TIC4902_DB" OWNER TO nodejs;
+    GRANT ALL ON SCHEMA public TO nodejs;
+    GRANT CREATE ON SCHEMA public TO nodejs;
