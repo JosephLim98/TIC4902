@@ -54,7 +54,7 @@ step_cluster() {
   require_cmd minikube
   if ! kubectl cluster-info >/dev/null 2>&1; then
     echo "Starting Minikube..."
-    minikube start --driver=docker --memory=4096 --cpus=2
+    minikube start --driver=docker --memory=6144 --cpus=4
   else
     echo "Kubernetes cluster is reachable."
   fi
