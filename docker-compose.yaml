@@ -92,20 +92,6 @@ services:
     networks:
       - kafka-network
 
-  # kpow-ce:
-  #   image: factorhouse/kpow-ce:latest
-  #   container_name: kpow-ce
-  #   ports:
-  #     - "3000:3000"
-  #   env_file:
-  #     - ./kpow.env
-  #   mem_limit: 2g
-  #   depends_on:
-  #     - kafka-1
-  #     - kafka-2
-  #     - kafka-3
-  #   restart: unless-stopped
-
   init-kafka:
     image: confluentinc/cp-kafka:7.7.0
     container_name: init-kafka

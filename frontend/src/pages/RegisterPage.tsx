@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { Spinner } from "../components/Spinner";
 import "../styles/Form.css";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { useCountdown } from "../hooks/useCountdown";
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -16,7 +17,9 @@ const RegisterPage = () => {
     const [localError, setLocalError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
-    const { register, isAuthenticated, isLoading, error, clearError } = useAuth();
+    const { register, isAuthenticated, isLoading, error, clearError, rateLimitedUntil } = useAuth();
+    const retrySeconds = useCountdown(rateLimitedUntil);
+    const isRateLimited = retrySeconds > 0;
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -102,7 +105,7 @@ const RegisterPage = () => {
                             }}
                             required
                             autoComplete="username"
-                            disabled={isLoading}
+                            disabled={isLoading || isRateLimited}
                             minLength={3}
                         />
                     </div>
@@ -122,7 +125,7 @@ const RegisterPage = () => {
                             }}
                             required
                             autoComplete="email"
-                            disabled={isLoading}
+                            disabled={isLoading || isRateLimited}
                         />
                     </div>
 
@@ -141,7 +144,7 @@ const RegisterPage = () => {
                                 }}
                                 required
                                 autoComplete="new-password"
-                                disabled={isLoading}
+                                disabled={isLoading || isRateLimited}
                                 minLength={6}
                             />
                             
@@ -169,7 +172,7 @@ const RegisterPage = () => {
                                 }}
                                 required
                                 autoComplete="new-password"
-                                disabled={isLoading}
+                                disabled={isLoading || isRateLimited}
                             />
 
                             <button type="button" className="password-toggle"
@@ -181,14 +184,22 @@ const RegisterPage = () => {
                         </div>
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="btn-primary">
-                        {isLoading ? <Spinner message="Creating account..." light /> : 'Sign Up'}
+                    {/* <button type="submit" disabled={isLoading || isRateLimited} className="btn-primary"> */}
+                    <button type="submit" disabled={isLoading || isRateLimited} className="btn-primary" style={isLoading || isRateLimited ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
+                        {isLoading ? (
+                            <Spinner message="Creating account..." light />
+                            ) : isRateLimited ? (
+                                `Try again in ${retrySeconds}s`
+                            ) : (
+                                'Sign Up'
+                            )}
                     </button>
                 </form>
 
                 {displayError && (
                     <div className="message message-error">
                         <strong>Error:</strong> {displayError}
+                        {/* {isRateLimited && `Try again in ${retrySeconds}s.`} */}
                     </div>
                 )}
 

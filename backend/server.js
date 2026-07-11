@@ -11,7 +11,11 @@ import { ensureBucketExists, ensureLogBucketExists } from "./src/service/minioSe
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  exposedHeaders: ['Retry-After', 'RateLimit-Policy', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+}));
+
 app.use(express.json());
 
 // Routes
