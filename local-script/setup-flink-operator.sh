@@ -22,6 +22,18 @@ kubectl get namespace flink-operator > /dev/null 2>&1 || {
     --set webhook.create=false
 }
 
+# Create application namespace
+kubectl create namespace tic4902 --dry-run=client -o yaml | kubectl apply -f -
+
+# Create service account in app namespace
+kubectl create serviceaccount flink -n tic4902 --dry-run=client -o yaml | kubectl apply -f -
+
+# Grant Flink service account permissions
+kubectl create clusterrolebinding flink-role-binding-tic4902 \
+  --clusterrole=edit \
+  --serviceaccount=tic4902:flink \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 # Create service account
 kubectl get serviceaccount flink > /dev/null 2>&1 || {
   kubectl create serviceaccount flink

@@ -42,6 +42,12 @@ function getContainerStateLabel(state: Record<string, unknown> | null) {
   return 'Unknown'
 }
 
+function getJobStatusState(jobStatus: Record<string, unknown> | null) {
+  const state = jobStatus?.state;
+
+  return typeof state === 'string' ? state : 'Unknown';
+}
+
 export default function DeploymentDiagnosticsModal({
   isOpen,
   deploymentName,
@@ -120,6 +126,7 @@ export default function DeploymentDiagnosticsModal({
             </h2>
             <p className="mt-0.5 text-xs text-zinc-400">
               {deploymentName}
+              {diagnostics ? ` · namespace: ${diagnostics.namespace}` : ''}
             </p>
           </div>
 
@@ -196,8 +203,9 @@ export default function DeploymentDiagnosticsModal({
                     tone={jobManagerTone(diagnostics.status.jobManagerDeploymentStatus)}
                 />
                 <InfoTile
-                    label="Namespace"
-                    value={diagnostics.namespace}
+                    label="Job Status"
+                    value={getJobStatusState(diagnostics.status.jobStatus)}
+                    tone={jobStatusTone(getJobStatusState(diagnostics.status.jobStatus))}
                 />
                 </div>
 
@@ -366,6 +374,13 @@ function jobManagerTone(value: string | null): InfoTone {
   if (value === 'DEPLOYING') return 'warning'
   if (value === 'ERROR' || value === 'MISSING') return 'danger'
   return 'neutral'
+}
+
+function jobStatusTone(value: string | null): InfoTone {
+  if (value === 'RUNNING' || value === 'FINISHED') return 'success';
+  if (value === 'CREATED' || value === 'INITIALIZING' || value === 'RESTARTING' || value === 'RECONCILING') return 'warning';
+  if (value === 'FAILED' || value === 'FAILING' || value === 'CANCELED') return 'danger';
+  return 'neutral';
 }
 
 function InfoTile({label,value,tone = 'neutral'}: {label: string;value: string;tone?: InfoTone}) {
