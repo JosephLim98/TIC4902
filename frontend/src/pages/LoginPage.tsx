@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { Spinner } from "../components/Spinner";
 import "../styles/Form.css";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { useCountdown } from "../hooks/useCountdown";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
@@ -13,7 +14,9 @@ const LoginPage = () => {
     const [localError, setLocalError] = useState("");
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
+    const { login, isAuthenticated, isLoading, error, clearError, rateLimitedUntil } = useAuth();
+    const retrySeconds = useCountdown(rateLimitedUntil);
+    const isRateLimited = retrySeconds > 0;
 
     // Get the page the user was trying to visit before being redirected
     // const from = (location.state as any)?.from?.pathname || "/";
@@ -80,7 +83,7 @@ const LoginPage = () => {
                             }} 
                             required 
                             autoComplete="email"
-                            disabled={isLoading}
+                            disabled={isLoading || isRateLimited}
                         />
                     </div>
 
@@ -98,7 +101,7 @@ const LoginPage = () => {
                                 }} 
                                 required 
                                 autoComplete="current-password"
-                                disabled={isLoading}
+                                disabled={isLoading || isRateLimited}
                             />
 
                             <button type="button" className="password-toggle"
@@ -116,16 +119,18 @@ const LoginPage = () => {
                                 type="checkbox"
                                 checked={rememberMe}
                                 onChange={(e) => setRememberMe(e.target.checked)}
-                                disabled={isLoading}
+                                disabled={isLoading || isRateLimited}
                             />
                             <span>Remember Me</span>
                         </label>
                         {/* <a href="#" className="link-text">Forgot Password?</a> */}
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="btn-primary">
+                    <button type="submit" disabled={isLoading || isRateLimited} className="btn-primary" style={isLoading || isRateLimited ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
                         {isLoading ? (
                             <Spinner message="Signing in..." light />
+                        ) : isRateLimited ? (
+                            `Try again in ${retrySeconds}s`
                         ) : (
                             'Sign In'
                         )}
@@ -135,6 +140,7 @@ const LoginPage = () => {
                 {error && (
                     <div className="message message-error">
                         <strong>Error:</strong> {error}
+                        {/* {isRateLimited && `Try again in ${retrySeconds}s.`} */}
                     </div>
                 )}
 

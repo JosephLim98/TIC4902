@@ -16,6 +16,9 @@ export interface AuthContextType {
     error: string | null;
     clearError: () => void;
     updateUser: (fields: Partial<Pick<User, 'username' | 'email'>>) => void;
+    // Epoch ms when a 429 rate limit lifts, or null if not currently rate-limited.
+    // Read from the Retry-After header the backend sends on 429 responses.
+    rateLimitedUntil: number | null;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

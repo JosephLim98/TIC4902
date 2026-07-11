@@ -5,6 +5,22 @@ import type { User, AuthContextType } from './AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// express-rate-limit sends Retry-After as a number of seconds (not a date)
+// When a 429 is returned, returns an epoch-ms timestamp for when the rate limit lifts, or null if the header is absent/unparseable
+function parseRetryAfterMs(response: Response): number | null {
+    const header = response.headers.get('Retry-After');
+    if (!header) {
+        return null;
+    };
+    
+    const seconds = Number(header);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+        return null;
+    };
+
+    return Date.now() + seconds * 1000;
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
         const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -24,6 +40,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
 
     // Initialize auth state from localStorage on mount
     useEffect(() => {
@@ -83,8 +101,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 429) {
+                    setRateLimitedUntil(parseRetryAfterMs(response));
+                }
+
                 throw new Error(data.message || 'Login failed');
             }
+
+            setRateLimitedUntil(null);
 
             const userData: User = {
                 username: data.data.username,
@@ -126,8 +150,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 429) {
+                    setRateLimitedUntil(parseRetryAfterMs(response));
+                }
+
                 throw new Error(data.message || 'Registration failed');
             }
+
+            setRateLimitedUntil(null);
 
             // Automatically log in the user after successful registration
             // await login(email, password);
@@ -172,6 +202,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         error,
         clearError,
         updateUser,
+        rateLimitedUntil,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
