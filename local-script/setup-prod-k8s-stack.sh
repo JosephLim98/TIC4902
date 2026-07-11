@@ -203,8 +203,8 @@ step_teardown() {
 step_all() {
   step_cluster
   step_helm_repos
-  step_operators
   step_namespace
+  step_operators
   step_postgresql
   step_minio
   step_kafka
