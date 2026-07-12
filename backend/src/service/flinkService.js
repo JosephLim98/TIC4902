@@ -209,11 +209,20 @@ function resolveDeploymentStatus(kubernetesStatus, deploymentMode) {
   if (jobState === 'FINISHED') {
     return specJobState === 'suspended' ? DEPLOYMENT_STATUS.SUSPENDED : DEPLOYMENT_STATUS.SUCCEEDED;
   }
-  if (jobState === 'FAILED') {
+  if (jobState === 'FAILED' || lifecycleState === 'FAILING') {
     return DEPLOYMENT_STATUS.FAILED;
   }
 
   if (kubernetesStatus?.error) {
+    const errorMessage = JSON.stringify(kubernetesStatus.error);
+    const jobIsStillStarting = lifecycleState === 'CREATED' || lifecycleState === 'DEPLOYED' || lifecycleState === 'RECONCILING' || lifecycleState === null;
+    const jobHasNotFailed = jobState !== 'FAILED' && jobState !== 'FAILING';
+    const isTemporaryMissingJob = errorMessage.includes('Job Not Found') || errorMessage.includes('Missing');
+
+    if (isTemporaryMissingJob && jobIsStillStarting && jobHasNotFailed) {
+      return DEPLOYMENT_STATUS.CREATING;
+    }
+
     return DEPLOYMENT_STATUS.FAILED;
   }
 
